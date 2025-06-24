@@ -121,6 +121,30 @@ export default function DataIngestion() {
     return 0;
   };
 
+  const handleDownload = async (doc: Document) => {
+    try {
+      const response = await fetch(`/api/documents/${doc.id}/download`);
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = doc.originalFilename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Unable to download the document.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleFileUpload = async () => {
     if (!selectedFile) return;
 
@@ -132,28 +156,7 @@ export default function DataIngestion() {
     uploadMutation.mutate(formData);
   };
 
-  const handleDownload = async (documentId: number, filename: string) => {
-    try {
-      const response = await fetch(`/api/documents/${documentId}/download`);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-      }
-    } catch (error) {
-      toast({
-        title: "Download Failed",
-        description: "Failed to download document.",
-        variant: "destructive",
-      });
-    }
-  };
+
 
   const formatFileSize = (bytes?: number): string => {
     if (!bytes) return 'Unknown';
