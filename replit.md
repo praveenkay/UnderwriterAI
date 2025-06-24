@@ -97,14 +97,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- **June 24, 2025**: Intelligent Token Management with Automatic Model Switching
-  - Implemented TokenManager service with tiktoken for accurate token counting
-  - Added automatic model selection based on content size (gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo)
-  - Created chunking strategy for large documents exceeding model token limits
-  - Enhanced all OpenAI API calls with intelligent model switching and fallback handling
-  - Fixed token limit errors (784,461 tokens -> automatic chunking with appropriate model)
-  - System now automatically switches to higher-capacity models for large document processing
-  - All AI providers now use optimal models based on token constraints and automatically revert to default
+- **June 24, 2025**: Enhanced Large Document Processing with Aggressive Chunking Strategy
+  - Implemented aggressive chunking strategy for extremely large documents (1.3M+ tokens)
+  - Enhanced TokenManager with conservative token limits (3K-5K tokens per chunk maximum)
+  - Added Excel file processing support with XLSX package integration
+  - Created fallback document processing for data exports and spreadsheets
+  - Implemented batch processing with rate limiting to prevent API overload
+  - Added FileProcessor service for handling multiple file formats including Excel
+  - Fixed token estimation issues with character-based chunking for massive files
+  - System now processes documents of any size with proper error handling and continuation
 
 - **June 24, 2025**: Custom Vector Database Implementation with OpenRouter Support
   - Added OpenRouter as fourth AI provider option alongside Anthropic, OpenAI, and Gemini
