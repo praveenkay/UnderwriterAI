@@ -1,20 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bot, User, Send, Paperclip, CheckCircle, AlertTriangle } from "lucide-react";
+import { Bot, User, Send, Paperclip, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import ChatHistoryPanel from "./ChatHistoryPanel";
 import ChatSettingsPanel from "./ChatSettingsPanel";
-import type { ChatMessage } from "../types";
+import type { ChatMessage } from "@shared/schema";
 
 export default function ChatInterface() {
   const [sessionId] = useState(() => `session_${Date.now()}`);
   const [inputMessage, setInputMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -37,6 +40,107 @@ export default function ChatInterface() {
       })));
     }
   }, [existingMessages]);
+
+  const handleFileAttach = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) {
+      console.log("Files selected:", files.map(f => f.name));
+      setAttachedFiles(prev => [...prev, ...files]);
+      
+      // Process each file for document ingestion
+      files.forEach(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('fileType', getFileType(file.name));
+        
+        try {
+          const response = await fetch('/api/documents/upload', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log(`Document ${file.name} processed: ${result.extractedRules} rules extracted`);
+          }
+        } catch (error) {
+          console.error('Failed to process document:', error);
+        }
+      });
+    }
+  };
+
+  const getFileType = (filename: string): string => {
+    const ext = filename.toLowerCase().split('.').pop();
+    switch (ext) {
+      case 'pdf':
+      case 'doc':
+      case 'docx':
+        return filename.toLowerCase().includes('policy') ? 'policy' : 
+               filename.toLowerCase().includes('guideline') ? 'guideline' :
+               filename.toLowerCase().includes('quote') ? 'quote' : 'guideline';
+      case 'txt':
+        return filename.toLowerCase().includes('chat') || filename.toLowerCase().includes('log') ? 'chat_log' : 'guideline';
+      default:
+        return 'guideline';
+    }
+  };
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (messageData: any) => {
+      const response = await fetch("/api/chat/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(messageData),
+      });
+      if (!response.ok) throw new Error("Failed to send message");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/chat/sessions/${sessionId}/messages`] });
+    },
+  });
+
+  const handleSendMessage = () => {
+    if (inputMessage.trim()) {
+      const newMessage: ChatMessage = {
+        id: Date.now(),
+        sessionId: sessionId,
+        brokerId: "broker_1",
+        brokerName: "John Smith",
+        sender: "broker",
+        message: inputMessage,
+        timestamp: new Date(),
+        messageType: "text",
+        metadata: {},
+        policyNumber: null,
+        isArchived: false,
+        attachments: attachedFiles.map(file => ({
+          filename: file.name,
+          size: file.size,
+          type: file.type
+        }))
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+      
+      sendMessageMutation.mutate({
+        sessionId: sessionId,
+        sender: "broker",
+        message: inputMessage,
+        messageType: "text",
+        policyNumber: null,
+        attachments: attachedFiles.map(file => ({
+          filename: file.name,
+          size: file.size,
+          type: file.type
+        }))
+      });
+
+      setInputMessage("");
+      setAttachedFiles([]);
+    }
+  };
 
   // WebSocket connection
   const { isConnected, sendMessage } = useWebSocket({

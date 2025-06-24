@@ -355,49 +355,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const data = JSON.parse(message.toString());
         
         if (data.type === 'chat_message') {
-          // Store broker message
-          const brokerMessage = await storage.createChatMessage({
+          const chatMessage = await storage.createChatMessage({
             sessionId: data.sessionId,
-            brokerName: data.brokerName || 'Unknown Broker',
-            sender: 'broker',
+            brokerId: DEMO_BROKER.id,
+            brokerName: DEMO_BROKER.name,
+            sender: data.sender,
             message: data.message,
-            timestamp: new Date(),
-            messageType: 'text',
-            metadata: {}
+            messageType: data.messageType || 'text',
+            policyNumber: data.policyNumber,
+            attachments: data.attachments || []
           });
-
-          // Get policy context if policy number mentioned
-          let policyData = null;
-          const policyMatch = data.message.match(/(?:policy|pol)[\s#]*([A-Z0-9-]+)/i);
-          if (policyMatch) {
-            policyData = await storage.getPolicyByNumber(policyMatch[1]);
-          }
-
-          // Get recent chat history for context
-          const chatHistory = await storage.getChatMessagesBySession(data.sessionId);
-          const recentHistory = chatHistory.slice(-5);
-
-          // Get active rules
-          const rules = await storage.getActiveRules();
-
-          // Check if this is an underwriting request
-          const isUnderwritingRequest = /(?:discount|approve|coverage|amendment|change)/i.test(data.message);
           
-          let aiResponse = "";
-          let messageType = "text";
-          let metadata: any = {};
-
-          if (isUnderwritingRequest && policyData) {
-            // Process as underwriting decision
-            const startTime = Date.now();
-            
-            const request = {
-              policyNumber: policyData.policyNumber,
-              clientName: policyData.clientName,
-              requestType: "discount", // Simplified - would parse from message
-              requestDetails: { percentage: 5 }, // Simplified - would extract from message
-              policyData,
-              riskProfile: policyData.riskProfile,
+          // Update attachments if provided
+          if (data.attachments && data.attachments.length > 0) {
+            await storage.updateChatMessageAttachments(chatMessage.id, data.attachments);
+          }
+          
+          // Broadcast to all connected clients
+          wss.clients.forEach((client) => {
+            if (client.readyState === 1) { // WebSocket.OPEN
+              client.send(JSON.stringify({
+                type: 'chat_message',
+                data: chatMessage
+              }));
+            }
+          });
+        }
+      } catch (error) {
+        log(`WebSocket error: ${error}`, "error");
+        ws.send(JSON.stringify({ type: 'error', message: 'Failed to process message' }));
+      }
+    });
               claimsHistory: Array.isArray(policyData.claimsHistory) ? policyData.claimsHistory : []
             };
 
