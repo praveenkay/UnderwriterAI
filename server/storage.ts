@@ -200,7 +200,10 @@ export class MemStorage implements IStorage {
       id,
       timestamp: insertMessage.timestamp || new Date(),
       messageType: insertMessage.messageType || "text",
-      metadata: insertMessage.metadata || {}
+      metadata: insertMessage.metadata || {},
+      policyNumber: insertMessage.policyNumber || null,
+      brokerId: insertMessage.brokerId || null,
+      isArchived: insertMessage.isArchived || false
     };
     this.chatMessages.set(id, message);
     return message;
@@ -221,7 +224,10 @@ export class MemStorage implements IStorage {
       ...insertDecision, 
       id,
       timestamp: insertDecision.timestamp || new Date(),
-      policyId: insertDecision.policyId || null
+      policyId: insertDecision.policyId || null,
+      sessionId: insertDecision.sessionId || null,
+      brokerId: insertDecision.brokerId || null,
+      rulesApplied: insertDecision.rulesApplied || []
     };
     this.underwritingDecisions.set(id, decision);
     return decision;
@@ -252,7 +258,11 @@ export class MemStorage implements IStorage {
       status: insertDocument.status || "pending",
       extractedRules: insertDocument.extractedRules || [],
       content: insertDocument.content || null,
-      processedDate: insertDocument.processedDate || null
+      processedDate: insertDocument.processedDate || null,
+      isActive: insertDocument.isActive !== undefined ? insertDocument.isActive : true,
+      uploadedBy: insertDocument.uploadedBy || null,
+      fileSize: insertDocument.fileSize || null,
+      contentHash: insertDocument.contentHash || null
     };
     this.documents.set(id, document);
     return document;
@@ -315,7 +325,10 @@ export class MemStorage implements IStorage {
       createdAt: insertEscalation.createdAt || new Date(),
       chatMessageId: insertEscalation.chatMessageId || null,
       assignedTo: insertEscalation.assignedTo || null,
-      resolvedAt: insertEscalation.resolvedAt || null
+      resolvedAt: insertEscalation.resolvedAt || null,
+      brokerId: insertEscalation.brokerId || null,
+      assignedToId: insertEscalation.assignedToId || null,
+      resolutionNotes: insertEscalation.resolutionNotes || null
     };
     this.escalations.set(id, escalation);
     return escalation;

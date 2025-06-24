@@ -35,6 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Store broker message
           const brokerMessage = await storage.createChatMessage({
             sessionId: data.sessionId,
+            brokerName: data.brokerName || 'Unknown Broker',
             sender: 'broker',
             message: data.message,
             timestamp: new Date(),
@@ -83,6 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Store the decision
             await storage.createUnderwritingDecision({
               policyId: policyData.id,
+              brokerName: data.brokerName || 'Unknown Broker',
               requestType: request.requestType,
               requestDetails: request.requestDetails,
               decision: result.decision,
@@ -103,6 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Create escalation
               await storage.createEscalation({
                 chatMessageId: brokerMessage.id,
+                brokerName: data.brokerName || 'Unknown Broker',
                 reason: result.escalationReason || result.reason,
                 priority: 'medium',
                 status: 'pending'
@@ -128,6 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Store AI response
           await storage.createChatMessage({
             sessionId: data.sessionId,
+            brokerName: data.brokerName || 'Unknown Broker',
             sender: 'ai',
             message: aiResponse,
             timestamp: new Date(),
