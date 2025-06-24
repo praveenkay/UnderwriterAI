@@ -149,11 +149,16 @@ export default function ChatInterface() {
         const newMessage: ChatMessage = {
           id: Date.now(),
           sessionId: data.sessionId,
+          brokerId: "broker_1",
+          brokerName: "AI Assistant",
           sender: 'ai',
           message: data.message,
           timestamp: new Date(),
           messageType: data.messageType || 'text',
-          metadata: data.metadata
+          metadata: data.metadata || {},
+          policyNumber: null,
+          isArchived: false,
+          attachments: []
         };
         setMessages(prev => [...prev, newMessage]);
       }
@@ -162,23 +167,6 @@ export default function ChatInterface() {
       console.error('WebSocket error:', error);
     }
   });
-
-  const handleSendMessage = () => {
-    if (!inputMessage.trim() || !isConnected) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now(),
-      sessionId,
-      sender: 'broker',
-      message: inputMessage,
-      timestamp: new Date(),
-      messageType: 'text'
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-
-    sendMessage({
-      type: 'chat_message',
       sessionId,
       message: inputMessage
     });
@@ -344,37 +332,32 @@ export default function ChatInterface() {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="pr-12"
-                disabled={!isConnected}
+                className="w-full"
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary"
-                onClick={() => {
-                  // Implement file attachment functionality
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = '.pdf,.doc,.docx,.txt,.csv,.xlsx';
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) {
-                      console.log('File selected:', file.name);
-                      // Handle file attachment
-                    }
-                  };
-                  input.click();
-                }}
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2"
+            >
+              <Paperclip className="w-4 h-4" />
+              Attach
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              hidden
+              onChange={handleFileAttach}
+              accept=".pdf,.doc,.docx,.txt,.jpg,.png"
+              multiple
+            />
             <Button 
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || !isConnected}
-              className="px-6"
+              disabled={!inputMessage.trim() || sendMessageMutation.isPending}
+              className="flex items-center gap-2"
             >
-              <Send className="h-4 w-4 mr-2" />
+              <Send className="h-4 w-4" />
               Send
             </Button>
           </div>

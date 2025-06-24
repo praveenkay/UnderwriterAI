@@ -386,92 +386,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ws.send(JSON.stringify({ type: 'error', message: 'Failed to process message' }));
       }
     });
-              claimsHistory: Array.isArray(policyData.claimsHistory) ? policyData.claimsHistory : []
-            };
-
-            const result = await evaluateUnderwritingRequest(request);
-            const responseTime = Date.now() - startTime;
-
-            // Store the decision
-            await storage.createUnderwritingDecision({
-              policyId: policyData.id,
-              brokerName: data.brokerName || 'Unknown Broker',
-              requestType: request.requestType,
-              requestDetails: request.requestDetails,
-              decision: result.decision,
-              decisionReason: result.reason,
-              confidence: result.confidence,
-              processedBy: 'ai',
-              responseTime
-            });
-
-            // Format AI response
-            if (result.decision === "approved") {
-              aiResponse = `✅ **${request.requestType.toUpperCase()} APPROVED** for ${policyData.clientName} (Policy #${policyData.policyNumber})\n\n${result.reason}\n\n**Decision Factors:**\n${result.factors.map(f => `• ${f}`).join('\n')}`;
-            } else if (result.decision === "declined") {
-              aiResponse = `❌ **${request.requestType.toUpperCase()} DECLINED** for ${policyData.clientName}\n\n${result.reason}`;
-            } else {
-              aiResponse = `🔄 **ESCALATED** - ${result.reason}\n\nThis query has been forwarded to a human underwriter for review.`;
-              
-              // Create escalation
-              await storage.createEscalation({
-                chatMessageId: brokerMessage.id,
-                brokerName: data.brokerName || 'Unknown Broker',
-                reason: result.escalationReason || result.reason,
-                priority: 'medium',
-                status: 'pending'
-              });
-            }
-
-            messageType = "decision";
-            metadata = {
-              decision: result.decision,
-              confidence: result.confidence,
-              factors: result.factors,
-              responseTime
-            };
-          } else {
-            // Generate general chat response
-            aiResponse = await generateChatResponse(data.message, {
-              policyData,
-              chatHistory: recentHistory,
-              rules
-            });
-          }
-
-          // Store AI response
-          await storage.createChatMessage({
-            sessionId: data.sessionId,
-            brokerName: data.brokerName || 'Unknown Broker',
-            sender: 'ai',
-            message: aiResponse,
-            timestamp: new Date(),
-            messageType,
-            metadata
-          });
-
-          // Send response back
-          ws.send(JSON.stringify({
-            type: 'chat_response',
-            sessionId: data.sessionId,
-            message: aiResponse,
-            messageType,
-            metadata
-          }));
-        }
-      } catch (error) {
-        console.error('WebSocket error:', error);
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: 'Failed to process message'
-        }));
-      }
-    });
 
     ws.on('close', () => {
-      console.log('WebSocket connection closed');
+      log('WebSocket connection closed');
     });
   });
+
+  // Serve static files in production
+  if (process.env.NODE_ENV === "production") {
+    serveStatic(app);
+  } else {
+    setupVite(app, httpServer);
+  }
 
   // Chat endpoints
   app.get('/api/chat/sessions/:sessionId/messages', async (req, res) => {
