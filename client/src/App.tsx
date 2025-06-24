@@ -22,9 +22,7 @@ function Router() {
       <Route path="/documents" component={DocumentsPage} />
       <Route path="/search" component={VectorSearch} />
       <Route path="/analytics" component={AnalyticsPage} />
-      <Route path="/data-ingestion">
-        {() => { window.location.href = "/documents"; return null; }}
-      </Route>
+      <Route path="/data-ingestion" component={DataIngestion} />
       <Route component={NotFound} />
     </Switch>
   );
