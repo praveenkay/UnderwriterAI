@@ -1,13 +1,18 @@
 import {
   users, policies, chatMessages, underwritingDecisions, documents, underwritingRules, escalations,
-  type User, type InsertUser, type Policy, type InsertPolicy, type ChatMessage, type InsertChatMessage,
+  analyticsEvents, brokerMetrics,
+  type User, type InsertUser, type UpsertUser, type Policy, type InsertPolicy, type ChatMessage, type InsertChatMessage,
   type UnderwritingDecision, type InsertUnderwritingDecision, type Document, type InsertDocument,
-  type UnderwritingRule, type InsertUnderwritingRule, type Escalation, type InsertEscalation
+  type UnderwritingRule, type InsertUnderwritingRule, type Escalation, type InsertEscalation,
+  type AnalyticsEvent, type InsertAnalyticsEvent, type BrokerMetrics, type InsertBrokerMetrics
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
-  // Users
-  getUser(id: number): Promise<User | undefined>;
+  // Users (Required for Auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
@@ -22,6 +27,7 @@ export interface IStorage {
   getChatMessagesBySession(sessionId: string): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getAllChatMessages(): Promise<ChatMessage[]>;
+  updateChatMessageAttachments(id: number, attachments: any[]): Promise<void>;
 
   // Underwriting Decisions
   getUnderwritingDecision(id: number): Promise<UnderwritingDecision | undefined>;
@@ -33,7 +39,8 @@ export interface IStorage {
   getDocument(id: number): Promise<Document | undefined>;
   createDocument(document: InsertDocument): Promise<Document>;
   getAllDocuments(): Promise<Document[]>;
-  updateDocumentStatus(id: number, status: string, extractedRules?: any[]): Promise<void>;
+  getDocumentsByBroker(brokerId: string): Promise<Document[]>;
+  updateDocumentStatus(id: number, status: string, extractedRules?: any[], extractedData?: any): Promise<void>;
 
   // Underwriting Rules
   getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined>;
@@ -48,24 +55,16 @@ export interface IStorage {
   updateEscalationStatus(id: number, status: string, assignedTo?: string): Promise<void>;
 
   // Analytics Events
-  createAnalyticsEvent(event: any): Promise<any>;
-  getAnalyticsEventsByBroker(brokerId: number, limit?: number): Promise<any[]>;
+  createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
+  getAnalyticsEventsByBroker(brokerId: string, limit?: number): Promise<AnalyticsEvent[]>;
   
   // Broker Metrics
-  createOrUpdateBrokerMetrics(metrics: any): Promise<any>;
-  getBrokerMetrics(brokerId: number, date?: Date): Promise<any>;
-  getAllBrokerMetrics(date?: Date): Promise<any[]>;
+  createOrUpdateBrokerMetrics(metrics: InsertBrokerMetrics): Promise<BrokerMetrics>;
+  getBrokerMetrics(brokerId: string, date?: Date): Promise<BrokerMetrics | undefined>;
+  getAllBrokerMetrics(date?: Date): Promise<BrokerMetrics[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User> = new Map();
-  private policies: Map<number, Policy> = new Map();
-  private chatMessages: Map<number, ChatMessage> = new Map();
-  private underwritingDecisions: Map<number, UnderwritingDecision> = new Map();
-  private documents: Map<number, Document> = new Map();
-  private underwritingRules: Map<number, UnderwritingRule> = new Map();
-  private escalations: Map<number, Escalation> = new Map();
-  private currentId = 1;
+export class DatabaseStorage implements IStorage {
 
   constructor() {
     this.seedData();
