@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Clock
 } from "lucide-react";
+import { Link } from "wouter";
 import type { UnderwritingDecision, Escalation, Metrics } from "../types";
 
 export default function ActivityFeed() {

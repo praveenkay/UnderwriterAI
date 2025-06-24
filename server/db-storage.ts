@@ -1,49 +1,43 @@
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
-import {
-  users,
-  policies,
-  chatMessages,
-  underwritingDecisions,
-  documents,
-  underwritingRules,
-  escalations,
-  analyticsEvents,
+import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { 
+  users, 
+  policies, 
+  chatMessages, 
+  underwritingDecisions, 
+  documents, 
+  underwritingRules, 
+  escalations, 
+  analyticsEvents, 
   brokerMetrics,
+  userSettings,
   type User,
-  type InsertUser,
+  type UpsertUser,
   type Policy,
-  type InsertPolicy,
   type ChatMessage,
-  type InsertChatMessage,
   type UnderwritingDecision,
-  type InsertUnderwritingDecision,
   type Document,
-  type InsertDocument,
   type UnderwritingRule,
-  type InsertUnderwritingRule,
   type Escalation,
-  type InsertEscalation,
   type AnalyticsEvent,
-  type InsertAnalyticsEvent,
   type BrokerMetrics,
-  type InsertBrokerMetrics,
+  type UserSettings
 } from "@shared/schema";
 import { IStorage } from "./storage";
 
 export class DatabaseStorage implements IStorage {
-  // Users
-  async getUser(id: number): Promise<User | undefined> {
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: any): Promise<User> {
     const [user] = await db
       .insert(users)
       .values(insertUser)
@@ -51,18 +45,33 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Policies
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  // Policy operations
   async getPolicy(id: number): Promise<Policy | undefined> {
     const [policy] = await db.select().from(policies).where(eq(policies.id, id));
-    return policy || undefined;
+    return policy;
   }
 
   async getPolicyByNumber(policyNumber: string): Promise<Policy | undefined> {
     const [policy] = await db.select().from(policies).where(eq(policies.policyNumber, policyNumber));
-    return policy || undefined;
+    return policy;
   }
 
-  async createPolicy(insertPolicy: InsertPolicy): Promise<Policy> {
+  async createPolicy(insertPolicy: any): Promise<Policy> {
     const [policy] = await db
       .insert(policies)
       .values(insertPolicy)
@@ -71,13 +80,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllPolicies(): Promise<Policy[]> {
-    return await db.select().from(policies);
+    return await db.select().from(policies).orderBy(desc(policies.createdAt));
   }
 
-  // Chat Messages
+  // Chat messages
   async getChatMessage(id: number): Promise<ChatMessage | undefined> {
     const [message] = await db.select().from(chatMessages).where(eq(chatMessages.id, id));
-    return message || undefined;
+    return message;
   }
 
   async getChatMessagesBySession(sessionId: string): Promise<ChatMessage[]> {
@@ -88,7 +97,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(chatMessages.timestamp);
   }
 
-  async createChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
+  async createChatMessage(insertMessage: any): Promise<ChatMessage> {
     const [message] = await db
       .insert(chatMessages)
       .values(insertMessage)
@@ -100,13 +109,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(chatMessages).orderBy(desc(chatMessages.timestamp));
   }
 
-  // Underwriting Decisions
+  // Underwriting decisions
   async getUnderwritingDecision(id: number): Promise<UnderwritingDecision | undefined> {
     const [decision] = await db.select().from(underwritingDecisions).where(eq(underwritingDecisions.id, id));
-    return decision || undefined;
+    return decision;
   }
 
-  async createUnderwritingDecision(insertDecision: InsertUnderwritingDecision): Promise<UnderwritingDecision> {
+  async createUnderwritingDecision(insertDecision: any): Promise<UnderwritingDecision> {
     const [decision] = await db
       .insert(underwritingDecisions)
       .values(insertDecision)
@@ -133,10 +142,10 @@ export class DatabaseStorage implements IStorage {
   // Documents
   async getDocument(id: number): Promise<Document | undefined> {
     const [document] = await db.select().from(documents).where(eq(documents.id, id));
-    return document || undefined;
+    return document;
   }
 
-  async createDocument(insertDocument: InsertDocument): Promise<Document> {
+  async createDocument(insertDocument: any): Promise<Document> {
     const [document] = await db
       .insert(documents)
       .values(insertDocument)
@@ -149,24 +158,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateDocumentStatus(id: number, status: string, extractedRules?: any[]): Promise<void> {
-    const updateData: any = { status };
-    if (extractedRules) {
-      updateData.extractedRules = extractedRules;
-    }
-    
     await db
       .update(documents)
-      .set(updateData)
+      .set({
+        status,
+        processedDate: new Date(),
+        extractedRules: extractedRules || []
+      })
       .where(eq(documents.id, id));
   }
 
-  // Underwriting Rules
+  // Underwriting rules
   async getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined> {
     const [rule] = await db.select().from(underwritingRules).where(eq(underwritingRules.id, id));
-    return rule || undefined;
+    return rule;
   }
 
-  async createUnderwritingRule(insertRule: InsertUnderwritingRule): Promise<UnderwritingRule> {
+  async createUnderwritingRule(insertRule: any): Promise<UnderwritingRule> {
     const [rule] = await db
       .insert(underwritingRules)
       .values(insertRule)
@@ -178,23 +186,24 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(underwritingRules)
-      .where(eq(underwritingRules.isActive, true));
+      .where(eq(underwritingRules.isActive, true))
+      .orderBy(desc(underwritingRules.createdAt));
   }
 
   async getRulesByType(ruleType: string): Promise<UnderwritingRule[]> {
     return await db
       .select()
       .from(underwritingRules)
-      .where(eq(underwritingRules.ruleType, ruleType));
+      .where(and(eq(underwritingRules.ruleType, ruleType), eq(underwritingRules.isActive, true)));
   }
 
   // Escalations
   async getEscalation(id: number): Promise<Escalation | undefined> {
     const [escalation] = await db.select().from(escalations).where(eq(escalations.id, id));
-    return escalation || undefined;
+    return escalation;
   }
 
-  async createEscalation(insertEscalation: InsertEscalation): Promise<Escalation> {
+  async createEscalation(insertEscalation: any): Promise<Escalation> {
     const [escalation] = await db
       .insert(escalations)
       .values(insertEscalation)
@@ -206,27 +215,23 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(escalations)
-      .where(eq(escalations.status, "pending"))
+      .where(eq(escalations.status, 'pending'))
       .orderBy(desc(escalations.createdAt));
   }
 
   async updateEscalationStatus(id: number, status: string, assignedTo?: string): Promise<void> {
     const updateData: any = { status };
-    if (assignedTo) {
-      updateData.assignedTo = assignedTo;
-    }
-    if (status === "resolved") {
-      updateData.resolvedAt = new Date();
-    }
-    
+    if (assignedTo) updateData.assignedTo = assignedTo;
+    if (status === 'resolved') updateData.resolvedAt = new Date();
+
     await db
       .update(escalations)
       .set(updateData)
       .where(eq(escalations.id, id));
   }
 
-  // Analytics Events
-  async createAnalyticsEvent(insertEvent: InsertAnalyticsEvent): Promise<AnalyticsEvent> {
+  // Analytics events
+  async createAnalyticsEvent(insertEvent: any): Promise<AnalyticsEvent> {
     const [event] = await db
       .insert(analyticsEvents)
       .values(insertEvent)
@@ -234,7 +239,7 @@ export class DatabaseStorage implements IStorage {
     return event;
   }
 
-  async getAnalyticsEventsByBroker(brokerId: number, limit = 100): Promise<AnalyticsEvent[]> {
+  async getAnalyticsEventsByBroker(brokerId: string, limit = 100): Promise<AnalyticsEvent[]> {
     return await db
       .select()
       .from(analyticsEvents)
@@ -243,50 +248,71 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
-  // Broker Metrics
-  async createOrUpdateBrokerMetrics(insertMetrics: InsertBrokerMetrics): Promise<BrokerMetrics> {
-    // Check if metrics exist for this broker and date
-    const existingMetrics = await this.getBrokerMetrics(insertMetrics.brokerId!, insertMetrics.metricDate!);
-    
-    if (existingMetrics) {
-      // Update existing metrics
-      const [updated] = await db
-        .update(brokerMetrics)
-        .set(insertMetrics)
-        .where(eq(brokerMetrics.id, existingMetrics.id))
-        .returning();
-      return updated;
-    } else {
-      // Create new metrics
-      const [metrics] = await db
-        .insert(brokerMetrics)
-        .values(insertMetrics)
-        .returning();
-      return metrics;
-    }
+  // Broker metrics
+  async createOrUpdateBrokerMetrics(insertMetrics: any): Promise<BrokerMetrics> {
+    const [metrics] = await db
+      .insert(brokerMetrics)
+      .values(insertMetrics)
+      .onConflictDoUpdate({
+        target: [brokerMetrics.brokerId, brokerMetrics.metricDate],
+        set: insertMetrics
+      })
+      .returning();
+    return metrics;
   }
 
-  async getBrokerMetrics(brokerId: number, date?: Date): Promise<BrokerMetrics | undefined> {
+  async getBrokerMetrics(brokerId: string, date?: Date): Promise<BrokerMetrics | undefined> {
     const targetDate = date || new Date();
     const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-    
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
     const [metrics] = await db
       .select()
       .from(brokerMetrics)
-      .where(eq(brokerMetrics.brokerId, brokerId))
-      .orderBy(desc(brokerMetrics.metricDate))
-      .limit(1);
-    
-    return metrics || undefined;
+      .where(
+        and(
+          eq(brokerMetrics.brokerId, brokerId),
+          gte(brokerMetrics.metricDate, startOfDay),
+          lte(brokerMetrics.metricDate, endOfDay)
+        )
+      );
+    return metrics;
   }
 
   async getAllBrokerMetrics(date?: Date): Promise<BrokerMetrics[]> {
-    const targetDate = date || new Date();
-    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    if (date) {
+      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+      return await db
+        .select()
+        .from(brokerMetrics)
+        .where(
+          and(
+            gte(brokerMetrics.metricDate, startOfDay),
+            lte(brokerMetrics.metricDate, endOfDay)
+          )
+        );
+    }
     
-    return await db
-      .select()
-      .from(brokerMetrics)
-      .orderBy(desc(brokerMetrics.metricDate));
+    return await db.select().from(brokerMetrics).orderBy(desc(brokerMetrics.metricDate));
+  }
+
+  // User settings
+  async getUserSettings(userId: string): Promise<UserSettings | undefined> {
+    const [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
+    return settings;
+  }
+
+  async createOrUpdateUserSettings(userId: string, settings: any): Promise<UserSettings> {
+    const [result] = await db
+      .insert(userSettings)
+      .values({ ...settings, userId })
+      .onConflictDoUpdate({
+        target: userSettings.userId,
+        set: { ...settings, updatedAt: new Date() }
+      })
+      .returning();
+    return result;
   }
 }

@@ -7,9 +7,10 @@ import {
 
 export interface IStorage {
   // Users
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  upsertUser(user: UpsertUser): Promise<User>;
 
   // Policies
   getPolicy(id: number): Promise<Policy | undefined>;
@@ -49,12 +50,16 @@ export interface IStorage {
 
   // Analytics Events
   createAnalyticsEvent(event: any): Promise<any>;
-  getAnalyticsEventsByBroker(brokerId: number, limit?: number): Promise<any[]>;
+  getAnalyticsEventsByBroker(brokerId: string, limit?: number): Promise<any[]>;
   
   // Broker Metrics
   createOrUpdateBrokerMetrics(metrics: any): Promise<any>;
-  getBrokerMetrics(brokerId: number, date?: Date): Promise<any>;
+  getBrokerMetrics(brokerId: string, date?: Date): Promise<any>;
   getAllBrokerMetrics(date?: Date): Promise<any[]>;
+
+  // User Settings
+  getUserSettings?(userId: string): Promise<any>;
+  createOrUpdateUserSettings?(userId: string, settings: any): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -396,6 +401,7 @@ import { initializeSQLiteDatabase } from "./init-sqlite";
 // Initialize database with sample data
 let isInitialized = false;
 
+import { DatabaseStorage } from './db-storage';
 export const storage = new DatabaseStorage();
 
 // Initialize and seed database on first use
