@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { RefreshCw, Upload, FileText, CheckCircle, XCircle, Clock, AlertTriangle, Download, Eye, Trash2 } from 'lucide-react';
+import Header from '../components/Header';
 
 interface Document {
   id: number;
@@ -42,20 +43,16 @@ export default function DataIngestion() {
 
   const { data: documents = [], refetch, isLoading } = useQuery({
     queryKey: ['/api/documents'],
-    refetchInterval: 1000,
-    staleTime: 0,
-    gcTime: 0, // Updated from cacheTime (React Query v5)
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    refetchInterval: 1000, // Poll every 1 second for real-time updates
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache results
   });
 
   const { data: processingStats, refetch: refetchStats } = useQuery({
     queryKey: ['/api/documents/stats'],
     refetchInterval: 1000,
-    staleTime: 0,
-    gcTime: 0, // Updated from cacheTime (React Query v5)
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache results
   });
 
   const uploadMutation = useMutation({
