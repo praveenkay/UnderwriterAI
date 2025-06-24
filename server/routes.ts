@@ -15,7 +15,10 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
-  const wss = new WebSocketServer({ server: httpServer });
+  const wss = new WebSocketServer({ 
+    server: httpServer,
+    path: '/ws' // Use a specific path to avoid conflicts
+  });
 
   // WebSocket for real-time chat
   wss.on('connection', (ws) => {
@@ -68,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               requestDetails: { percentage: 5 }, // Simplified - would extract from message
               policyData,
               riskProfile: policyData.riskProfile,
-              claimsHistory: policyData.claimsHistory
+              claimsHistory: Array.isArray(policyData.claimsHistory) ? policyData.claimsHistory : []
             };
 
             const result = await evaluateUnderwritingRequest(request);

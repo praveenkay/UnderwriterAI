@@ -137,7 +137,11 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentId++;
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      role: insertUser.role || "broker"
+    };
     this.users.set(id, user);
     return user;
   }
@@ -153,7 +157,14 @@ export class MemStorage implements IStorage {
 
   async createPolicy(insertPolicy: InsertPolicy): Promise<Policy> {
     const id = this.currentId++;
-    const policy: Policy = { ...insertPolicy, id };
+    const policy: Policy = { 
+      ...insertPolicy, 
+      id,
+      isActive: insertPolicy.isActive ?? true,
+      claimsHistory: insertPolicy.claimsHistory || [],
+      riskProfile: insertPolicy.riskProfile || "medium",
+      renewalDate: insertPolicy.renewalDate || null
+    };
     this.policies.set(id, policy);
     return policy;
   }
@@ -175,7 +186,13 @@ export class MemStorage implements IStorage {
 
   async createChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
     const id = this.currentId++;
-    const message: ChatMessage = { ...insertMessage, id };
+    const message: ChatMessage = { 
+      ...insertMessage, 
+      id,
+      timestamp: insertMessage.timestamp || new Date(),
+      messageType: insertMessage.messageType || "text",
+      metadata: insertMessage.metadata || {}
+    };
     this.chatMessages.set(id, message);
     return message;
   }
@@ -191,7 +208,12 @@ export class MemStorage implements IStorage {
 
   async createUnderwritingDecision(insertDecision: InsertUnderwritingDecision): Promise<UnderwritingDecision> {
     const id = this.currentId++;
-    const decision: UnderwritingDecision = { ...insertDecision, id };
+    const decision: UnderwritingDecision = { 
+      ...insertDecision, 
+      id,
+      timestamp: insertDecision.timestamp || new Date(),
+      policyId: insertDecision.policyId || null
+    };
     this.underwritingDecisions.set(id, decision);
     return decision;
   }
@@ -214,7 +236,15 @@ export class MemStorage implements IStorage {
 
   async createDocument(insertDocument: InsertDocument): Promise<Document> {
     const id = this.currentId++;
-    const document: Document = { ...insertDocument, id };
+    const document: Document = { 
+      ...insertDocument, 
+      id,
+      uploadDate: insertDocument.uploadDate || new Date(),
+      status: insertDocument.status || "pending",
+      extractedRules: insertDocument.extractedRules || [],
+      content: insertDocument.content || null,
+      processedDate: insertDocument.processedDate || null
+    };
     this.documents.set(id, document);
     return document;
   }
@@ -243,7 +273,12 @@ export class MemStorage implements IStorage {
 
   async createUnderwritingRule(insertRule: InsertUnderwritingRule): Promise<UnderwritingRule> {
     const id = this.currentId++;
-    const rule: UnderwritingRule = { ...insertRule, id };
+    const rule: UnderwritingRule = { 
+      ...insertRule, 
+      id,
+      isActive: insertRule.isActive ?? true,
+      createdAt: insertRule.createdAt || new Date()
+    };
     this.underwritingRules.set(id, rule);
     return rule;
   }
@@ -263,7 +298,16 @@ export class MemStorage implements IStorage {
 
   async createEscalation(insertEscalation: InsertEscalation): Promise<Escalation> {
     const id = this.currentId++;
-    const escalation: Escalation = { ...insertEscalation, id };
+    const escalation: Escalation = { 
+      ...insertEscalation, 
+      id,
+      status: insertEscalation.status || "pending",
+      priority: insertEscalation.priority || "medium",
+      createdAt: insertEscalation.createdAt || new Date(),
+      chatMessageId: insertEscalation.chatMessageId || null,
+      assignedTo: insertEscalation.assignedTo || null,
+      resolvedAt: insertEscalation.resolvedAt || null
+    };
     this.escalations.set(id, escalation);
     return escalation;
   }
