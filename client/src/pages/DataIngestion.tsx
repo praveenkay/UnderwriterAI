@@ -43,12 +43,16 @@ export default function DataIngestion() {
 
   const { data: documents = [], refetch, isLoading } = useQuery({
     queryKey: ['/api/documents'],
-    refetchInterval: 2000, // Poll every 2 seconds for real-time updates
+    refetchInterval: 1000, // Poll every 1 second for real-time updates
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache results
   });
 
-  const { data: processingStats } = useQuery({
+  const { data: processingStats, refetch: refetchStats } = useQuery({
     queryKey: ['/api/documents/stats'],
     refetchInterval: 1000,
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache results
   });
 
   const uploadMutation = useMutation({
@@ -63,7 +67,11 @@ export default function DataIngestion() {
     onSuccess: () => {
       setSelectedFile(null);
       setUploading(false);
+      // Force immediate refresh of both queries
+      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/documents/stats'] });
       refetch();
+      refetchStats();
       toast({
         title: "Upload Successful",
         description: "Document uploaded and processing started.",
