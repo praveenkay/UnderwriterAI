@@ -5,13 +5,17 @@ import {
   underwritingRules, 
   chatMessages, 
   underwritingDecisions,
-  documents 
+  documents,
+  analyticsEvents,
+  brokerMetrics
 } from "@shared/schema";
 
 export async function seedDatabase() {
   console.log("Seeding database with sample data...");
 
   // Clear existing data
+  await db.delete(brokerMetrics);
+  await db.delete(analyticsEvents);
   await db.delete(underwritingDecisions);
   await db.delete(chatMessages);
   await db.delete(documents);
@@ -116,16 +120,22 @@ export async function seedDatabase() {
   await db.insert(chatMessages).values([
     {
       sessionId,
+      brokerId: brokerUser.id,
+      brokerName: brokerUser.name,
       sender: "broker",
       message: "Hi, I need to apply a 5% renewal discount for ABC Bakery, policy SME-2024-0892. They've been with us for 3 years with no claims.",
       messageType: "text",
+      policyNumber: "SME-2024-0892",
       timestamp: new Date(Date.now() - 300000), // 5 minutes ago
     },
     {
       sessionId,
+      brokerId: brokerUser.id,
+      brokerName: brokerUser.name,
       sender: "ai",
       message: "I've reviewed ABC Bakery's policy (SME-2024-0892). They qualify for the 5% renewal discount based on:\n\n• 3+ years as a client with clean claims history\n• Low risk profile maintained\n• Policy in good standing\n\n**Decision: APPROVED** ✓\n\nThe 5% discount has been applied. New premium: £2,280 (reduced from £2,400).",
       messageType: "decision",
+      policyNumber: "SME-2024-0892",
       timestamp: new Date(Date.now() - 280000), // 4 min 40 sec ago
       metadata: {
         decision: "approved",
@@ -139,6 +149,9 @@ export async function seedDatabase() {
   // Seed sample underwriting decision
   await db.insert(underwritingDecisions).values({
     policyId: policy1.id,
+    brokerId: brokerUser.id,
+    brokerName: brokerUser.name,
+    sessionId,
     requestType: "renewal_discount",
     requestDetails: {
       discountPercentage: 5,
@@ -150,13 +163,19 @@ export async function seedDatabase() {
     confidence: 0.95,
     processedBy: "AI",
     responseTime: 1200,
+    rulesApplied: [{ ruleId: 1, ruleName: "renewal_discount", confidence: 0.9 }]
   });
 
   // Seed sample document
   await db.insert(documents).values({
     filename: "underwriting-guidelines-sample.txt",
+    originalFilename: "Zurich_SME_Guidelines_2024.txt",
     fileType: "guideline",
+    uploadedBy: brokerUser.id,
+    brokerName: brokerUser.name,
     status: "completed",
+    fileSize: 15000,
+    contentHash: "abc123def456",
     extractedRules: [
       {
         type: "renewal_discount",
@@ -169,6 +188,60 @@ export async function seedDatabase() {
         rule: "Restaurant maximum coverage £750k without risk assessment"
       }
     ]
+  });
+
+  // Seed analytics events
+  const now = new Date();
+  await db.insert(analyticsEvents).values([
+    {
+      eventType: "chat_message",
+      brokerId: brokerUser.id,
+      brokerName: brokerUser.name,
+      sessionId,
+      entityType: "chat",
+      timestamp: new Date(now.getTime() - 300000),
+      metadata: { messageType: "text" },
+      duration: 0
+    },
+    {
+      eventType: "decision_made",
+      brokerId: brokerUser.id,
+      brokerName: brokerUser.name,
+      sessionId,
+      entityType: "policy",
+      entityId: policy1.id,
+      timestamp: new Date(now.getTime() - 280000),
+      metadata: { decision: "approved", confidence: 0.95 },
+      duration: 1200
+    },
+    {
+      eventType: "document_uploaded",
+      brokerId: brokerUser.id,
+      brokerName: brokerUser.name,
+      entityType: "document",
+      entityId: 1,
+      timestamp: new Date(now.getTime() - 600000),
+      metadata: { fileType: "guideline", status: "completed" },
+      duration: 5000
+    }
+  ]);
+
+  // Seed broker metrics
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Start of day
+  
+  await db.insert(brokerMetrics).values({
+    brokerId: brokerUser.id,
+    brokerName: brokerUser.name,
+    metricDate: today,
+    totalChats: 5,
+    totalDecisions: 4,
+    avgResponseTime: 1350,
+    avgConfidence: 0.92,
+    successfulDecisions: 4,
+    escalatedCases: 0,
+    documentsUploaded: 1,
+    activePolicies: 2
   });
 
   console.log("Database seeded successfully!");

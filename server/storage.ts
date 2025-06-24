@@ -46,6 +46,15 @@ export interface IStorage {
   createEscalation(escalation: InsertEscalation): Promise<Escalation>;
   getPendingEscalations(): Promise<Escalation[]>;
   updateEscalationStatus(id: number, status: string, assignedTo?: string): Promise<void>;
+
+  // Analytics Events
+  createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
+  getAnalyticsEventsByBroker(brokerId: number, limit?: number): Promise<AnalyticsEvent[]>;
+  
+  // Broker Metrics
+  createOrUpdateBrokerMetrics(metrics: InsertBrokerMetrics): Promise<BrokerMetrics>;
+  getBrokerMetrics(brokerId: number, date?: Date): Promise<BrokerMetrics | undefined>;
+  getAllBrokerMetrics(date?: Date): Promise<BrokerMetrics[]>;
 }
 
 export class MemStorage implements IStorage {

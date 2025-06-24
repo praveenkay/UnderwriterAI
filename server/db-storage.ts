@@ -8,6 +8,8 @@ import {
   documents,
   underwritingRules,
   escalations,
+  analyticsEvents,
+  brokerMetrics,
   type User,
   type InsertUser,
   type Policy,
@@ -22,6 +24,10 @@ import {
   type InsertUnderwritingRule,
   type Escalation,
   type InsertEscalation,
+  type AnalyticsEvent,
+  type InsertAnalyticsEvent,
+  type BrokerMetrics,
+  type InsertBrokerMetrics,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 
@@ -217,5 +223,70 @@ export class DatabaseStorage implements IStorage {
       .update(escalations)
       .set(updateData)
       .where(eq(escalations.id, id));
+  }
+
+  // Analytics Events
+  async createAnalyticsEvent(insertEvent: InsertAnalyticsEvent): Promise<AnalyticsEvent> {
+    const [event] = await db
+      .insert(analyticsEvents)
+      .values(insertEvent)
+      .returning();
+    return event;
+  }
+
+  async getAnalyticsEventsByBroker(brokerId: number, limit = 100): Promise<AnalyticsEvent[]> {
+    return await db
+      .select()
+      .from(analyticsEvents)
+      .where(eq(analyticsEvents.brokerId, brokerId))
+      .orderBy(desc(analyticsEvents.timestamp))
+      .limit(limit);
+  }
+
+  // Broker Metrics
+  async createOrUpdateBrokerMetrics(insertMetrics: InsertBrokerMetrics): Promise<BrokerMetrics> {
+    // Check if metrics exist for this broker and date
+    const existingMetrics = await this.getBrokerMetrics(insertMetrics.brokerId!, insertMetrics.metricDate!);
+    
+    if (existingMetrics) {
+      // Update existing metrics
+      const [updated] = await db
+        .update(brokerMetrics)
+        .set(insertMetrics)
+        .where(eq(brokerMetrics.id, existingMetrics.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new metrics
+      const [metrics] = await db
+        .insert(brokerMetrics)
+        .values(insertMetrics)
+        .returning();
+      return metrics;
+    }
+  }
+
+  async getBrokerMetrics(brokerId: number, date?: Date): Promise<BrokerMetrics | undefined> {
+    const targetDate = date || new Date();
+    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    
+    const [metrics] = await db
+      .select()
+      .from(brokerMetrics)
+      .where(eq(brokerMetrics.brokerId, brokerId))
+      .orderBy(desc(brokerMetrics.metricDate))
+      .limit(1);
+    
+    return metrics || undefined;
+  }
+
+  async getAllBrokerMetrics(date?: Date): Promise<BrokerMetrics[]> {
+    const targetDate = date || new Date();
+    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    
+    return await db
+      .select()
+      .from(brokerMetrics)
+      .orderBy(desc(brokerMetrics.metricDate));
   }
 }
