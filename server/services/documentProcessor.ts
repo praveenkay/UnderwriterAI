@@ -22,8 +22,15 @@ export async function processDocument(documentId: number): Promise<void> {
       case "policy":
         extractedRules = await processPolicyDocument(document.content || "");
         break;
+      case "data_export":
+      case "spreadsheet":
+      case "excel":
+        extractedRules = await processDataExport(document.content || "");
+        break;
       default:
-        throw new Error(`Unsupported file type: ${document.fileType}`);
+        // Try to process as a general document
+        extractedRules = await processGuidelineDocument(document.content || "");
+        break;
     }
 
     // Save extracted rules to the rules engine
@@ -126,6 +133,49 @@ async function processPolicyDocument(content: string): Promise<any[]> {
   }
 
   return rules;
+}
+
+async function processDataExport(content: string): Promise<any[]> {
+  console.log('Processing data export/spreadsheet...');
+  
+  try {
+    // For large data exports, we need to use the AI service with chunking support
+    const { aiService } = await import('./aiProvider');
+    return await aiService.extractDocumentRules(content, 'data_export');
+  } catch (error) {
+    console.error('Error processing data export:', error);
+    
+    // Fallback: Try to extract simple patterns manually
+    const rules: any[] = [];
+    
+    // Look for policy numbers or identifiers
+    const policyMatches = content.match(/POL\d+|POLICY\d+/gi);
+    if (policyMatches && policyMatches.length > 0) {
+      rules.push({
+        ruleType: "data_insight",
+        conditions: { hasMultiplePolicies: true },
+        action: { note: `Found ${policyMatches.length} policy references` },
+        confidence: 70,
+        source: "data_export_analysis",
+        description: `Data export contains ${policyMatches.length} policy references`
+      });
+    }
+    
+    // Look for premium amounts
+    const premiumMatches = content.match(/[\$£€]\s*[\d,]+(?:\.\d{2})?/g);
+    if (premiumMatches && premiumMatches.length > 0) {
+      rules.push({
+        ruleType: "data_insight", 
+        conditions: { hasPremiumData: true },
+        action: { note: `Contains ${premiumMatches.length} premium values` },
+        confidence: 80,
+        source: "data_export_analysis",
+        description: `Data export contains premium information`
+      });
+    }
+    
+    return rules;
+  }
 }
 
 export async function uploadAndProcessDocument(
