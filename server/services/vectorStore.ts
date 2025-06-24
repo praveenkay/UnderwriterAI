@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import PDFParse from "pdf-parse";
 import OpenAI from "openai";
 
 export interface VectorSearchResult {
@@ -134,9 +133,15 @@ export class VectorStoreService {
       
       // Extract content based on file type
       if (fileType === 'application/pdf' || filename.endsWith('.pdf')) {
-        const pdfBuffer = fs.readFileSync(filePath);
-        const pdfData = await PDFParse(pdfBuffer);
-        content = pdfData.text;
+        try {
+          const PDFParse = await import('pdf-parse');
+          const pdfBuffer = fs.readFileSync(filePath);
+          const pdfData = await PDFParse.default(pdfBuffer);
+          content = pdfData.text;
+        } catch (pdfError) {
+          console.error('PDF parsing failed:', pdfError);
+          content = `[PDF content could not be extracted from ${filename}]`;
+        }
       } else {
         // Handle text files, CSV, JSON, etc.
         content = fs.readFileSync(filePath, 'utf-8');

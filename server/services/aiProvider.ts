@@ -409,21 +409,50 @@ export class AIService {
 
   constructor() {
     // Initialize available providers based on API keys
-    if (process.env.ANTHROPIC_API_KEY) {
-      this.providers.set('anthropic', new AnthropicProvider());
-    }
-    if (process.env.OPENAI_API_KEY) {
-      this.providers.set('openai', new OpenAIProvider());
-    }
-    if (process.env.GEMINI_API_KEY) {
-      this.providers.set('gemini', new GeminiProvider());
+    try {
+      if (process.env.ANTHROPIC_API_KEY) {
+        this.providers.set('anthropic', new AnthropicProvider());
+      }
+    } catch (error) {
+      console.warn('Anthropic provider not available:', error.message);
     }
 
-    // Set default provider (prefer Anthropic, then OpenAI, then Gemini)
-    this.currentProvider = this.providers.get('anthropic') || 
-                          this.providers.get('openai') || 
-                          this.providers.get('gemini') ||
-                          new AnthropicProvider(); // fallback
+    try {
+      if (process.env.OPENAI_API_KEY) {
+        this.providers.set('openai', new OpenAIProvider());
+      }
+    } catch (error) {
+      console.warn('OpenAI provider not available:', error.message);
+    }
+
+    try {
+      if (process.env.GEMINI_API_KEY) {
+        this.providers.set('gemini', new GeminiProvider());
+      }
+    } catch (error) {
+      console.warn('Gemini provider not available:', error.message);
+    }
+
+    try {
+      if (process.env.OPENROUTER_API_KEY) {
+        this.providers.set('openrouter', new OpenRouterProvider());
+      }
+    } catch (error) {
+      console.warn('OpenRouter provider not available:', error.message);
+    }
+
+    // Set default provider (prefer OpenAI, then Anthropic, then OpenRouter, then Gemini)
+    if (this.providers.has('openai')) {
+      this.currentProvider = this.providers.get('openai')!;
+    } else if (this.providers.has('anthropic')) {
+      this.currentProvider = this.providers.get('anthropic')!;
+    } else if (this.providers.has('openrouter')) {
+      this.currentProvider = this.providers.get('openrouter')!;
+    } else if (this.providers.has('gemini')) {
+      this.currentProvider = this.providers.get('gemini')!;
+    } else {
+      throw new Error('No AI providers available. Please configure API keys.');
+    }
   }
 
   setProvider(providerName: string): boolean {

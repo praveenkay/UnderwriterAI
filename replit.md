@@ -97,17 +97,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- **June 24, 2025**: Langchain Vector Database Implementation with OpenRouter Support
+- **June 24, 2025**: Custom Vector Database Implementation with OpenRouter Support
   - Added OpenRouter as fourth AI provider option alongside Anthropic, OpenAI, and Gemini
-  - Implemented comprehensive Langchain integration with FAISS vector database for document ingestion
-  - Created vector store service for semantic document search and content retrieval
+  - Implemented custom vector database service replacing Langchain for better compatibility
+  - Created vector store service with semantic document search and content retrieval
   - Fixed document processing pipeline to properly extract content from PDFs and text files
-  - Added vector search tab in document library with real-time semantic search capabilities
+  - Added dedicated vector search page with real-time semantic search capabilities
   - Enhanced chat responses with vector-based context retrieval from uploaded documents
-  - Implemented proper document chunking and embedding storage for learning vector database
-  - Added vector store statistics and monitoring in user profile and document analytics
+  - Implemented proper document chunking with OpenAI embeddings for semantic similarity
+  - Added vector store statistics and monitoring with document source tracking
   - All document uploads now process successfully with rule extraction and vector storage
   - Chat AI now has access to full document context through vector similarity search
+  - Vector search supports both semantic (with embeddings) and keyword fallback search
 
 - **June 24, 2025**: Complete AI-Powered Feature Implementation
   - Implemented multi-AI provider support (Anthropic Claude, OpenAI GPT, Google Gemini) with dynamic switching
