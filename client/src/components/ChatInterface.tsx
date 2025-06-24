@@ -167,16 +167,9 @@ export default function ChatInterface() {
       console.error('WebSocket error:', error);
     }
   });
-      sessionId,
-      message: inputMessage
-    });
-
-    setInputMessage("");
-  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+    if (e.key === 'Enter') {
       handleSendMessage();
     }
   };
