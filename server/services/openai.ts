@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { tokenManager } from './tokenManager';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -64,20 +65,22 @@ Respond with JSON in this exact format:
 `;
 
   try {
+    // Estimate tokens and select optimal model for underwriting decision
+    const systemPrompt = "You are an expert underwriting AI for Zurich Insurance. Make precise, rule-based decisions and explain your reasoning clearly.";
+    const totalTokens = tokenManager.estimateTokens(prompt + systemPrompt);
+    const strategy = tokenManager.selectOptimalModel(totalTokens);
+    
+    console.log(`Underwriting decision using model: ${strategy.model}`);
+
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: strategy.model,
       messages: [
-        {
-          role: "system",
-          content: "You are an expert underwriting AI for Zurich Insurance. Make precise, rule-based decisions and explain your reasoning clearly."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.1
+      temperature: 0.1,
+      max_tokens: 4096
     });
 
     const result = JSON.parse(response.choices[0].message.content!);
@@ -96,11 +99,14 @@ Respond with JSON in this exact format:
 }
 
 export async function extractRulesFromChatHistory(chatHistory: string[]): Promise<any[]> {
+  const systemPrompt = "You are an expert at analyzing insurance underwriting conversations and extracting business rules and decision patterns.";
+  const chatContent = chatHistory.join('\n\n---\n\n');
+  
   const prompt = `
 Analyze the following chat history between brokers and underwriters to extract underwriting rules and decision patterns.
 
 CHAT HISTORY:
-${chatHistory.join('\n\n---\n\n')}
+${chatContent}
 
 Extract underwriting rules in the following categories:
 1. Discount Rules (renewal discounts, loyalty discounts, etc.)
@@ -128,28 +134,92 @@ Respond with JSON array in this format:
 `;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert at analyzing insurance underwriting conversations and extracting business rules and decision patterns."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.2
-    });
+    // Estimate tokens and select optimal model
+    const contentTokens = tokenManager.estimateTokens(prompt);
+    const systemTokens = tokenManager.estimateTokens(systemPrompt);
+    const strategy = tokenManager.selectOptimalModel(contentTokens, systemTokens);
+    
+    console.log(`Chat history rule extraction using strategy:`, strategy);
 
-    const result = JSON.parse(response.choices[0].message.content!);
-    return result.rules || [];
+    let allRules: any[] = [];
+
+    if (strategy.shouldChunk) {
+      // Process in chunks for large chat histories
+      const chunks = tokenManager.chunkContent(chatContent, strategy.chunkSize!);
+      console.log(`Processing ${chunks.length} chunks for chat history rule extraction`);
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const chunkPrompt = prompt.replace(chatContent, chunk);
+        
+        const response = await openai.chat.completions.create({
+          model: strategy.model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: chunkPrompt }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+          max_tokens: 4096
+        });
+
+        const result = JSON.parse(response.choices[0].message.content!);
+        const chunkRules = result.rules || [];
+        allRules.push(...chunkRules);
+        
+        console.log(`Extracted ${chunkRules.length} rules from chat chunk ${i + 1}`);
+
+        // Small delay between chunks
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      // Deduplicate rules
+      allRules = deduplicateRules(allRules);
+      console.log(`Final chat history result: ${allRules.length} unique rules after deduplication`);
+    } else {
+      const response = await openai.chat.completions.create({
+        model: strategy.model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+        max_tokens: 8192
+      });
+
+      const result = JSON.parse(response.choices[0].message.content!);
+      allRules = result.rules || [];
+    }
+
+    return allRules;
   } catch (error) {
     console.error("Rule extraction error:", error);
     throw new Error("Failed to extract rules from chat history: " + (error as Error).message);
   }
+}
+
+/**
+ * Remove duplicate rules based on similarity
+ */
+function deduplicateRules(rules: any[]): any[] {
+  const uniqueRules: any[] = [];
+  
+  for (const rule of rules) {
+    const isDuplicate = uniqueRules.some(existing => 
+      existing.ruleType === rule.ruleType &&
+      JSON.stringify(existing.conditions) === JSON.stringify(rule.conditions) &&
+      JSON.stringify(existing.action) === JSON.stringify(rule.action)
+    );
+    
+    if (!isDuplicate) {
+      uniqueRules.push(rule);
+    }
+  }
+  
+  return uniqueRules;
 }
 
 export async function generateChatResponse(
@@ -180,19 +250,21 @@ Keep responses concise, professional, and actionable. Always explain your reason
 `;
 
   try {
+    // Estimate tokens and select optimal model for chat response
+    const systemPrompt = "You are a professional AI underwriting assistant for Zurich Insurance. Be helpful, accurate, and explain your decision-making process.";
+    const totalTokens = tokenManager.estimateTokens(prompt + systemPrompt);
+    const strategy = tokenManager.selectOptimalModel(totalTokens);
+    
+    console.log(`Chat response using model: ${strategy.model}`);
+
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: strategy.model,
       messages: [
-        {
-          role: "system",
-          content: "You are a professional AI underwriting assistant for Zurich Insurance. Be helpful, accurate, and explain your decision-making process."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt }
       ],
-      temperature: 0.3
+      temperature: 0.3,
+      max_tokens: 2048
     });
 
     return response.choices[0].message.content || "I apologize, but I couldn't process your request. Please try again.";

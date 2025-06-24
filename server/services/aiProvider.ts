@@ -115,15 +115,24 @@ class OpenAIProvider implements AIProvider {
   }
 
   async generateResponse(messages: any[], systemPrompt?: string): Promise<string> {
+    // Import tokenManager dynamically to avoid circular imports
+    const { tokenManager } = await import('./tokenManager');
+    
     const formattedMessages = systemPrompt 
       ? [{ role: 'system', content: systemPrompt }, ...messages]
       : messages;
+    
+    const totalTokens = formattedMessages.reduce((sum, msg) => 
+      sum + tokenManager.estimateTokens(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)), 0
+    );
+    
+    const strategy = tokenManager.selectOptimalModel(totalTokens);
+    console.log(`OpenAI generateResponse using model: ${strategy.model}`);
 
     const response = await this.client.chat.completions.create({
-      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      model: "gpt-4o",
+      model: strategy.model,
       messages: formattedMessages,
-      max_tokens: 1024,
+      max_tokens: 2048,
     });
 
     return response.choices[0].message.content || '';

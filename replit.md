@@ -97,6 +97,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **June 24, 2025**: Intelligent Token Management with Automatic Model Switching
+  - Implemented TokenManager service with tiktoken for accurate token counting
+  - Added automatic model selection based on content size (gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo)
+  - Created chunking strategy for large documents exceeding model token limits
+  - Enhanced all OpenAI API calls with intelligent model switching and fallback handling
+  - Fixed token limit errors (784,461 tokens -> automatic chunking with appropriate model)
+  - System now automatically switches to higher-capacity models for large document processing
+  - All AI providers now use optimal models based on token constraints and automatically revert to default
+
 - **June 24, 2025**: Custom Vector Database Implementation with OpenRouter Support
   - Added OpenRouter as fourth AI provider option alongside Anthropic, OpenAI, and Gemini
   - Implemented custom vector database service replacing Langchain for better compatibility
