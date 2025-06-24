@@ -1,6 +1,6 @@
-import { Bell, User } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
+import NotificationsPanel from "./NotificationsPanel";
+import UserProfilePanel from "./UserProfilePanel";
 
 export default function Header() {
   const [location] = useLocation();
@@ -60,20 +60,9 @@ export default function Header() {
               </Link>
             </nav>
           </div>
-          <div className="flex items-center space-x-6">
-            <div className="relative">
-              <Bell className="h-5 w-5 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors" />
-              <div className="status-dot status-error absolute -top-1 -right-1"></div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-gray-600" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-medium text-gray-900">Sarah Johnson</div>
-                <div className="text-xs text-gray-500">Senior Broker</div>
-              </div>
-            </div>
+          <div className="flex items-center space-x-4">
+            <NotificationsPanel />
+            <UserProfilePanel />
           </div>
         </div>
       </div>

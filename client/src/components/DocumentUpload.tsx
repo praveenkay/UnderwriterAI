@@ -137,8 +137,8 @@ export default function DocumentUpload() {
             id="file-upload"
           />
           <label htmlFor="file-upload">
-            <Button variant="outline" size="sm" className="cursor-pointer">
-              Choose File
+            <Button variant="outline" size="sm" className="cursor-pointer" asChild>
+              <span>Choose File</span>
             </Button>
           </label>
           
@@ -173,49 +173,72 @@ export default function DocumentUpload() {
           </div>
         )}
 
-        <div className="space-y-2">
-          {isLoading ? (
-            <div className="space-y-2">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="p-3 bg-gray-50 rounded-lg animate-pulse">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 bg-gray-300 rounded"></div>
-                    <div className="flex-1">
-                      <div className="h-4 bg-gray-300 rounded w-3/4 mb-1"></div>
-                      <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-gray-900">Uploaded Files</h4>
+            {documents && documents.length > 3 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-primary hover:text-primary/80"
+                onClick={() => window.open('/documents', '_blank')}
+              >
+                View All ({documents.length})
+              </Button>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            {isLoading ? (
+              <div className="space-y-2">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="p-3 bg-gray-50 rounded-lg animate-pulse">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-300 rounded w-3/4 mb-1"></div>
+                        <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : documents && documents.length > 0 ? (
-            documents.slice(0, 3).map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  {getFileTypeIcon(doc.fileType)}
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{doc.filename}</p>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline" className={getStatusColor(doc.status)}>
-                        {doc.status}
-                      </Badge>
-                      {doc.extractedRules.length > 0 && (
-                        <span className="text-xs text-gray-500">
-                          {doc.extractedRules.length} rules extracted
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {getStatusIcon(doc.status)}
+                ))}
               </div>
-            ))
-          ) : (
-            <div className="text-center py-4 text-gray-500">
-              <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No documents uploaded yet</p>
-            </div>
-          )}
+            ) : documents && documents.length > 0 ? (
+              documents.slice(0, 3).map((doc) => (
+                <div 
+                  key={doc.id} 
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                  onClick={() => {
+                    // Open document details or download
+                    console.log('Opening document:', doc.filename);
+                  }}
+                >
+                  <div className="flex items-center space-x-3">
+                    {getFileTypeIcon(doc.fileType)}
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{doc.filename}</p>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline" className={getStatusColor(doc.status)}>
+                          {doc.status}
+                        </Badge>
+                        {doc.extractedRules.length > 0 && (
+                          <span className="text-xs text-gray-500">
+                            {doc.extractedRules.length} rules extracted
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {getStatusIcon(doc.status)}
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No documents uploaded yet</p>
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

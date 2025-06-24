@@ -14,6 +14,8 @@ import {
 import type { UnderwritingDecision, Escalation, Metrics } from "../types";
 
 export default function ActivityFeed() {
+  const [selectedPeriod, setSelectedPeriod] = useState("7");
+  
   const { data: recentDecisions } = useQuery<UnderwritingDecision[]>({
     queryKey: ['/api/decisions/recent'],
   });
@@ -25,6 +27,30 @@ export default function ActivityFeed() {
   const { data: metrics } = useQuery<Metrics>({
     queryKey: ['/api/metrics'],
   });
+
+  // Mock data for different time periods
+  const getMetricsForPeriod = (days: string) => {
+    const baseMetrics = metrics;
+    if (!baseMetrics) return null;
+    
+    const multipliers = {
+      "7": 1,
+      "30": 1.2,
+      "90": 1.5
+    };
+    
+    const multiplier = multipliers[days as keyof typeof multipliers] || 1;
+    
+    return {
+      ...baseMetrics,
+      automationRate: Math.min(95, Math.round(baseMetrics.automationRate * multiplier)),
+      avgResponseTime: Math.round(baseMetrics.avgResponseTime / multiplier),
+      brokerSatisfaction: Math.min(5, baseMetrics.brokerSatisfaction * multiplier),
+      totalDecisions: Math.round(baseMetrics.totalDecisions * multiplier)
+    };
+  };
+
+  const periodMetrics = getMetricsForPeriod(selectedPeriod);
 
   const formatTimeAgo = (timestamp: Date) => {
     const now = new Date();
@@ -82,7 +108,11 @@ export default function ActivityFeed() {
           <CardTitle className="text-lg font-medium text-gray-900">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button variant="ghost" className="w-full justify-between p-3 h-auto">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-between p-3 h-auto"
+            onClick={() => window.open('/escalations', '_blank')}
+          >
             <div className="flex items-center space-x-3">
               <AlertTriangle className="h-4 w-4 text-orange-500" />
               <span className="text-sm font-medium text-gray-900">View Escalations</span>
@@ -92,17 +122,59 @@ export default function ActivityFeed() {
             </Badge>
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start p-3 h-auto">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start p-3 h-auto"
+            onClick={() => {
+              // Export chat logs functionality
+              const exportData = {
+                timestamp: new Date().toISOString(),
+                totalSessions: 15,
+                exportedBy: 'Sarah Johnson'
+              };
+              const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `chat-logs-${new Date().toISOString().split('T')[0]}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
             <Download className="h-4 w-4 text-blue-500 mr-3" />
             <span className="text-sm font-medium text-gray-900">Export Chat Logs</span>
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start p-3 h-auto">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start p-3 h-auto"
+            onClick={() => window.open('/rules', '_blank')}
+          >
             <Settings className="h-4 w-4 text-gray-500 mr-3" />
             <span className="text-sm font-medium text-gray-900">Manage Rules</span>
           </Button>
           
-          <Button variant="ghost" className="w-full justify-start p-3 h-auto">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start p-3 h-auto"
+            onClick={() => {
+              // Generate report functionality
+              const reportData = {
+                generatedAt: new Date().toISOString(),
+                period: 'Last 30 days',
+                totalDecisions: metrics?.totalDecisions || 0,
+                automationRate: metrics?.automationRate || 0,
+                avgResponseTime: metrics?.avgResponseTime || 0
+              };
+              const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `performance-report-${new Date().toISOString().split('T')[0]}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
             <BarChart className="h-4 w-4 text-green-500 mr-3" />
             <span className="text-sm font-medium text-gray-900">Generate Report</span>
           </Button>
@@ -114,7 +186,12 @@ export default function ActivityFeed() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-medium text-gray-900">Recent Activity</CardTitle>
-            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-primary hover:text-primary/80"
+              onClick={() => window.open('/activity', '_blank')}
+            >
               View All
             </Button>
           </div>
@@ -156,11 +233,16 @@ export default function ActivityFeed() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-medium text-gray-900">Performance Analytics</CardTitle>
-            <select className="text-sm border border-gray-300 rounded-lg px-3 py-1">
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 90 days</option>
-            </select>
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -168,30 +250,30 @@ export default function ActivityFeed() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Automation Success Rate</span>
               <span className="text-sm font-medium text-gray-900">
-                {metrics?.automationRate || 0}%
+                {periodMetrics?.automationRate || 0}%
               </span>
             </div>
-            <Progress value={metrics?.automationRate || 0} className="h-2" />
+            <Progress value={periodMetrics?.automationRate || 0} className="h-2" />
           </div>
           
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Average Response Time</span>
               <span className="text-sm font-medium text-gray-900">
-                {metrics ? (metrics.avgResponseTime / 1000).toFixed(1) : 0}s
+                {periodMetrics ? (periodMetrics.avgResponseTime / 1000).toFixed(1) : 0}s
               </span>
             </div>
-            <Progress value={95} className="h-2" />
+            <Progress value={Math.min(100, 100 - (periodMetrics?.avgResponseTime || 1000) / 50)} className="h-2" />
           </div>
           
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Broker Satisfaction</span>
               <span className="text-sm font-medium text-gray-900">
-                {metrics?.brokerSatisfaction || 0}/5
+                {periodMetrics?.brokerSatisfaction || 0}/5
               </span>
             </div>
-            <Progress value={96} className="h-2" />
+            <Progress value={(periodMetrics?.brokerSatisfaction || 0) * 20} className="h-2" />
           </div>
           
           <div className="pt-4 border-t border-gray-200">

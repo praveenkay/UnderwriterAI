@@ -4,8 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bot, User, Send, Paperclip, History, Settings, CheckCircle, AlertTriangle } from "lucide-react";
+import { Bot, User, Send, Paperclip, CheckCircle, AlertTriangle } from "lucide-react";
 import { useWebSocket } from "../hooks/useWebSocket";
+import ChatHistoryPanel from "./ChatHistoryPanel";
+import ChatSettingsPanel from "./ChatSettingsPanel";
 import type { ChatMessage } from "../types";
 
 export default function ChatInterface() {
@@ -111,14 +113,8 @@ export default function ChatInterface() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm">
-              <History className="h-4 w-4 mr-1" />
-              History
-            </Button>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-1" />
-              Settings
-            </Button>
+            <ChatHistoryPanel />
+            <ChatSettingsPanel />
           </div>
         </div>
 
@@ -251,6 +247,20 @@ export default function ChatInterface() {
                 variant="ghost"
                 size="sm"
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary"
+                onClick={() => {
+                  // Implement file attachment functionality
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.pdf,.doc,.docx,.txt,.csv,.xlsx';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                      console.log('File selected:', file.name);
+                      // Handle file attachment
+                    }
+                  };
+                  input.click();
+                }}
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
