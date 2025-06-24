@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage, initializeStorage } from "./storage";
 import multer from "multer";
-import { WebSocketServer } from "ws";
+// WebSocket removed - using HTTP only
 import { ingestDocument } from "./services/documentIngestion";
 import { generateReport, exportChatSession } from "./services/reportGenerator";
 import { insertChatMessageSchema, insertUnderwritingDecisionSchema, insertDocumentSchema } from "@shared/schema";
@@ -153,6 +153,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       log(`Error creating chat message: ${error}`, "error");
       res.status(500).json({ error: "Failed to create chat message" });
+    }
+  });
+
+  // Enhanced chat message handling via HTTP POST
+  app.post("/api/chat/message", upload.array('attachments'), async (req, res) => {
+    try {
+      const { sessionId, brokerId = 'broker_1', brokerName = 'John Smith', message, messageType = 'text' } = req.body;
+      
+      if (!sessionId || !message) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      // Generate AI response with enhanced context
+      const aiResponse = await generateChatResponse(message, sessionId, brokerName);
+
+      res.json({
+        success: true,
+        response: aiResponse.message || "I understand your request. How can I help you with your underwriting needs?",
+        messageType: aiResponse.messageType || 'text',
+        metadata: aiResponse.metadata || {}
+      });
+    } catch (error) {
+      console.error('Chat message error:', error);
+      res.status(500).json({ 
+        error: 'Failed to process message',
+        response: "I understand your request. How can I help you with your underwriting needs?"
+      });
     }
   });
 
@@ -343,63 +370,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // WebSocket server for real-time chat
+  // Simple HTTP server without WebSocket to prevent connection issues
   const httpServer = createServer(app);
-  const wss = new WebSocketServer({ server: httpServer });
 
-  wss.on('connection', (ws) => {
-    log('New WebSocket connection');
-    
-    ws.on('message', async (message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        
-        if (data.type === 'chat_message') {
-          const chatMessage = await storage.createChatMessage({
-            sessionId: data.sessionId,
-            brokerId: DEMO_BROKER.id,
-            brokerName: DEMO_BROKER.name,
-            sender: data.sender,
-            message: data.message,
-            messageType: data.messageType || 'text',
-            policyNumber: data.policyNumber,
-            attachments: data.attachments || []
-          });
-          
-          // Update attachments if provided
-          if (data.attachments && data.attachments.length > 0) {
-            await storage.updateChatMessageAttachments(chatMessage.id, data.attachments);
-          }
-          
-          // Broadcast to all connected clients
-          wss.clients.forEach((client) => {
-            if (client.readyState === 1) { // WebSocket.OPEN
-              client.send(JSON.stringify({
-                type: 'chat_message',
-                data: chatMessage
-              }));
-            }
-          });
-        }
-      } catch (error) {
-        log(`WebSocket error: ${error}`, "error");
-        ws.send(JSON.stringify({ type: 'error', message: 'Failed to process message' }));
-      }
-    });
+  // WebSocket functionality removed for stability
 
-    ws.on('close', () => {
-      log('WebSocket connection closed');
-    });
-  });
+  // Server routing handled in index.ts
 
-  // Serve static files in production
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    setupVite(app, httpServer);
-  }
-
-  // Chat endpoints
+  // Chat sessions endpoint
   app.get('/api/chat/sessions/:sessionId/messages', async (req, res) => {
     try {
       const messages = await storage.getChatMessagesBySession(req.params.sessionId);
