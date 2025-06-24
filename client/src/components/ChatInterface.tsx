@@ -145,11 +145,17 @@ export default function ChatInterface() {
               </div>
               
               <div className="grid grid-cols-2 gap-3">
-                <button className="btn-swiss text-left p-3 text-sm">
+                <button 
+                  className="btn-swiss text-left p-3 text-sm"
+                  onClick={() => setInputMessage("Can I apply a 5% renewal discount for ABC Bakery policy SME-2024-0892?")}
+                >
                   <div className="font-medium text-gray-700">Try: "5% renewal discount for ABC Bakery"</div>
                   <div className="text-xs text-gray-500 mt-1">Quick renewal request</div>
                 </button>
-                <button className="btn-swiss text-left p-3 text-sm">
+                <button 
+                  className="btn-swiss text-left p-3 text-sm"
+                  onClick={() => setInputMessage("Can we increase coverage for City Restaurant from £750k to £900k?")}
+                >
                   <div className="font-medium text-gray-700">Try: "Coverage increase to £900k"</div>
                   <div className="text-xs text-gray-500 mt-1">Policy amendment</div>
                 </button>
