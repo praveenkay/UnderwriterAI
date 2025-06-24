@@ -332,20 +332,29 @@ export class MemStorage implements IStorage {
 
 import { DatabaseStorage } from "./db-storage";
 import { seedDatabase } from "./seed-data";
+import { initializeSQLiteDatabase } from "./init-sqlite";
 
 // Initialize database with sample data
-let isSeeded = false;
+let isInitialized = false;
 
 export const storage = new DatabaseStorage();
 
-// Seed database on first use
+// Initialize and seed database on first use
 export async function initializeStorage() {
-  if (!isSeeded) {
+  if (!isInitialized) {
     try {
+      // Initialize SQLite database tables
+      initializeSQLiteDatabase();
+      
+      // Seed with sample data
       await seedDatabase();
-      isSeeded = true;
+      isInitialized = true;
+      console.log("Database initialized and seeded successfully");
     } catch (error) {
-      console.error("Failed to seed database:", error);
+      console.error("Failed to initialize database:", error);
+      // Fall back to in-memory storage if database fails
+      console.log("Falling back to in-memory storage...");
+      return new MemStorage();
     }
   }
   return storage;
