@@ -23,9 +23,11 @@ AgentVerse is an AI-powered underwriting assistant designed for Zurich Insurance
 - **AI Integration**: OpenAI API for intelligent decision making
 
 ### Database Design
-- **ORM**: Drizzle with PostgreSQL dialect
-- **Schema Location**: `shared/schema.ts` for type sharing
-- **Migration Strategy**: Push-based migrations via `drizzle-kit`
+- **Database**: SQLite with better-sqlite3 driver for local persistence
+- **ORM**: Drizzle ORM with SQLite dialect
+- **Schema Location**: `shared/schema.ts` for comprehensive type sharing
+- **Migration Strategy**: Manual table creation with automated seeding
+- **Data Structure**: Broker-centric design with proper naming conventions and relationships
 
 ## Key Components
 
@@ -55,12 +57,13 @@ AgentVerse is an AI-powered underwriting assistant designed for Zurich Insurance
 
 ## Data Flow
 
-1. **Broker Interaction**: Brokers initiate conversations through the chat interface
-2. **Context Gathering**: System retrieves relevant policy data and chat history
-3. **Decision Processing**: Rules engine evaluates requests using business rules and AI
-4. **Response Generation**: AI generates contextualized responses with decision rationale
-5. **Persistence**: All interactions, decisions, and outcomes are stored for audit trail
-6. **Escalation**: Complex cases are flagged for human underwriter review
+1. **Broker Identification**: Each interaction is tagged with broker ID and name for proper attribution
+2. **Activity Tracking**: All user actions are logged in analytics events table with timestamps and metadata
+3. **Chat History Storage**: Complete conversation history stored with broker context and policy associations
+4. **Document Management**: Files uploaded by brokers are tracked with original metadata and processing status
+5. **Decision Recording**: All underwriting decisions linked to specific brokers with session context
+6. **Performance Metrics**: Daily broker performance calculated and stored for analytics dashboard
+7. **Audit Trail**: Complete data lineage maintained for compliance and performance analysis
 
 ## External Dependencies
 
@@ -94,14 +97,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- **June 24, 2025**: Hackathon enhancement for Agentic AI Hyper Challenge
-  - Enhanced document ingestion with advanced rule extraction
-  - Implemented Swiss design inspired UI with clean typography and spacing
-  - Added comprehensive sample data for chat logs and underwriting guidelines
-  - Enhanced broker chat interface with quick action suggestions
-  - Improved metrics dashboard with real-time performance indicators
-  - WebSocket optimization for reduced latency broker interactions
-  - Advanced rule engine with confidence scoring and escalation logic
+- **June 24, 2025**: Complete Database Implementation with Broker-Specific Data Storage
+  - Implemented SQLite database with comprehensive schema for persistent data storage
+  - Added broker-specific data tracking across all entities (chat messages, documents, decisions)
+  - Enhanced analytics system with real-time event tracking and broker performance metrics
+  - Implemented proper naming conventions for broker data identification and retrieval
+  - Added analytics events table for tracking user interactions and system performance
+  - Created broker metrics table for daily performance summaries and KPI tracking
+  - Enhanced document management with metadata tracking (file size, hash, upload tracking)
+  - Added comprehensive data relationships linking brokers to all their activities
 
 ## Changelog
 
