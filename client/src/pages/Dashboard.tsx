@@ -1,22 +1,11 @@
-import React, { useEffect } from "react";
-import Header from "../components/Header";
+import React from "react";
 import MetricsCards from "../components/MetricsCards";
 import ChatInterface from "../components/ChatInterface";
-
 import ActivityFeed from "../components/ActivityFeed";
 
 export default function Dashboard() {
-  useEffect(() => {
-    // Scroll to header when page loads
-    const headerElement = document.getElementById('header');
-    if (headerElement) {
-      headerElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, []);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <Header />
       
       <div className="max-w-7xl mx-auto px-8 py-12">
         {/* Hero Section */}
