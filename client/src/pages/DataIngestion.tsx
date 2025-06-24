@@ -43,16 +43,20 @@ export default function DataIngestion() {
 
   const { data: documents = [], refetch, isLoading } = useQuery({
     queryKey: ['/api/documents'],
-    refetchInterval: 1000, // Poll every 1 second for real-time updates
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache results
+    refetchInterval: 1000,
+    staleTime: 0,
+    gcTime: 0, // Updated from cacheTime (React Query v5)
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const { data: processingStats, refetch: refetchStats } = useQuery({
     queryKey: ['/api/documents/stats'],
     refetchInterval: 1000,
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache results
+    staleTime: 0,
+    gcTime: 0, // Updated from cacheTime (React Query v5)
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const uploadMutation = useMutation({
