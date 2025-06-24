@@ -78,10 +78,11 @@ export class TokenManager {
       }
     }
 
-    // If content is too large for any model, use chunking with gpt-4o-mini
-    const chunkModel = 'gpt-4o-mini';
+    // If content is too large for any model, use chunking with the highest capacity model
+    const chunkModel = 'gpt-3.5-turbo'; // Use gpt-3.5-turbo for massive documents
     const chunkLimits = MODEL_LIMITS[chunkModel];
-    const chunkSize = Math.floor((chunkLimits.contextWindow - systemPromptTokens - outputBuffer) * 0.8);
+    // Very small chunk size for extremely large documents (10K tokens max per chunk)
+    const chunkSize = Math.min(10000, Math.floor((chunkLimits.contextWindow - systemPromptTokens - outputBuffer) * 0.1));
     
     console.log(`Content too large, using chunking with ${chunkModel} (chunk size: ${chunkSize} tokens)`);
     return { 
@@ -95,20 +96,54 @@ export class TokenManager {
    * Split content into chunks based on token limits
    */
   chunkContent(content: string, maxChunkTokens: number): string[] {
-    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    console.log(`Chunking content: ${content.length} chars, max tokens per chunk: ${maxChunkTokens}`);
+    
+    // For extremely large content, use character-based chunking first
+    if (content.length > 500000) {
+      return this.chunkByCharacters(content, maxChunkTokens);
+    }
+    
+    // Try sentence-based chunking first
+    const sentences = content.split(/[.!?\n]+/).filter(s => s.trim().length > 0);
     const chunks: string[] = [];
     let currentChunk = '';
     let currentTokens = 0;
 
     for (const sentence of sentences) {
-      const sentenceTokens = this.estimateTokens(sentence);
+      const sentenceTokens = this.estimateTokens(sentence.trim());
+      
+      // If single sentence is too large, split it further
+      if (sentenceTokens > maxChunkTokens) {
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+          currentTokens = 0;
+        }
+        
+        // Split oversized sentence by words
+        const words = sentence.split(/\s+/);
+        let wordChunk = '';
+        for (const word of words) {
+          const wordTokens = this.estimateTokens(wordChunk + ' ' + word);
+          if (wordTokens > maxChunkTokens && wordChunk) {
+            chunks.push(wordChunk.trim());
+            wordChunk = word;
+          } else {
+            wordChunk += (wordChunk ? ' ' : '') + word;
+          }
+        }
+        if (wordChunk.trim()) {
+          chunks.push(wordChunk.trim());
+        }
+        continue;
+      }
       
       if (currentTokens + sentenceTokens > maxChunkTokens && currentChunk) {
         chunks.push(currentChunk.trim());
-        currentChunk = sentence;
+        currentChunk = sentence.trim();
         currentTokens = sentenceTokens;
       } else {
-        currentChunk += (currentChunk ? '. ' : '') + sentence;
+        currentChunk += (currentChunk ? '. ' : '') + sentence.trim();
         currentTokens += sentenceTokens;
       }
     }
@@ -117,6 +152,39 @@ export class TokenManager {
       chunks.push(currentChunk.trim());
     }
 
+    console.log(`Created ${chunks.length} chunks from content`);
+    return chunks.filter(chunk => chunk.trim().length > 0);
+  }
+
+  /**
+   * Chunk content by character count for extremely large documents
+   */
+  private chunkByCharacters(content: string, maxChunkTokens: number): string[] {
+    // Very conservative estimate: 2 chars per token for safety
+    const maxCharsPerChunk = Math.min(maxChunkTokens * 2, 20000); // Max 20K chars per chunk
+    const chunks: string[] = [];
+    
+    for (let i = 0; i < content.length; i += maxCharsPerChunk) {
+      let chunk = content.slice(i, i + maxCharsPerChunk);
+      
+      // Try to break at word boundaries
+      if (i + maxCharsPerChunk < content.length) {
+        const lastSpaceIndex = chunk.lastIndexOf(' ');
+        const lastNewlineIndex = chunk.lastIndexOf('\n');
+        const breakIndex = Math.max(lastSpaceIndex, lastNewlineIndex);
+        
+        if (breakIndex > maxCharsPerChunk * 0.7) {
+          chunk = chunk.slice(0, breakIndex);
+          i = i + breakIndex; // Adjust position
+        }
+      }
+      
+      if (chunk.trim().length > 0) {
+        chunks.push(chunk.trim());
+      }
+    }
+    
+    console.log(`Character-based chunking created ${chunks.length} chunks (avg ${Math.round(content.length / chunks.length)} chars each)`);
     return chunks;
   }
 

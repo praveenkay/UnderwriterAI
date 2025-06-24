@@ -4,6 +4,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { aiService } from './aiProvider';
 import { storage } from '../storage';
+import { FileProcessor } from './fileProcessor';
 
 const uploadDir = './uploads';
 
@@ -29,13 +30,15 @@ const fileFilter = (req: any, file: any, cb: any) => {
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'text/csv',
-    'application/json'
+    'application/json',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    'application/vnd.ms-excel' // .xls
   ];
   
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only TXT, PDF, DOC, DOCX, CSV, and JSON files are allowed.'), false);
+    cb(new Error('Invalid file type. Only TXT, PDF, DOC, DOCX, CSV, JSON, and Excel files are allowed.'), false);
   }
 };
 

@@ -150,28 +150,70 @@ Respond with JSON array in this format:
 
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        const chunkPrompt = prompt.replace(chatContent, chunk);
         
-        const response = await openai.chat.completions.create({
-          model: strategy.model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: chunkPrompt }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.2,
-          max_tokens: 4096
-        });
-
-        const result = JSON.parse(response.choices[0].message.content!);
-        const chunkRules = result.rules || [];
-        allRules.push(...chunkRules);
+        // Double-check chunk size before sending - be very conservative
+        const chunkTokens = tokenManager.estimateTokens(chunk);
+        const maxAllowedTokens = Math.min(10000, MODEL_LIMITS[strategy.model].contextWindow - systemTokens - 4096);
         
-        console.log(`Extracted ${chunkRules.length} rules from chat chunk ${i + 1}`);
+        if (chunkTokens > maxAllowedTokens) {
+          console.log(`Chunk ${i + 1} still too large (${chunkTokens} tokens), splitting further...`);
+          const subChunks = tokenManager.chunkContent(chunk, maxAllowedTokens);
+          
+          for (const subChunk of subChunks) {
+            const subChunkPrompt = `Analyze this chat history segment and extract underwriting rules:\n\n${subChunk}`;
+            
+            try {
+              const response = await openai.chat.completions.create({
+                model: strategy.model,
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: subChunkPrompt }
+                ],
+                response_format: { type: "json_object" },
+                temperature: 0.2,
+                max_tokens: 2048
+              });
 
-        // Small delay between chunks
+              const result = JSON.parse(response.choices[0].message.content!);
+              const subChunkRules = result.rules || [];
+              allRules.push(...subChunkRules);
+              
+              console.log(`Extracted ${subChunkRules.length} rules from sub-chunk`);
+              
+              // Delay between sub-chunks
+              await new Promise(resolve => setTimeout(resolve, 200));
+            } catch (subError) {
+              console.error(`Error processing sub-chunk:`, subError.message);
+            }
+          }
+        } else {
+          const chunkPrompt = `Analyze this chat history segment (${i + 1}/${chunks.length}) and extract underwriting rules:\n\n${chunk}`;
+          
+          try {
+            const response = await openai.chat.completions.create({
+              model: strategy.model,
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: chunkPrompt }
+              ],
+              response_format: { type: "json_object" },
+              temperature: 0.2,
+              max_tokens: 4096
+            });
+
+            const result = JSON.parse(response.choices[0].message.content!);
+            const chunkRules = result.rules || [];
+            allRules.push(...chunkRules);
+            
+            console.log(`Extracted ${chunkRules.length} rules from chat chunk ${i + 1}`);
+          } catch (chunkError) {
+            console.error(`Error processing chunk ${i + 1}:`, chunkError.message);
+          }
+        }
+
+        // Delay between chunks
         if (i < chunks.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
       }
 
