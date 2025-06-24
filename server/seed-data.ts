@@ -22,18 +22,16 @@ export async function seedDatabase() {
   // Seed users
   const [brokerUser] = await db.insert(users).values({
     username: "broker1",
-    email: "broker@zurich.com",
-    fullName: "Sarah Johnson",
+    password: "password123",
+    name: "Sarah Johnson",
     role: "broker",
-    isActive: true,
   }).returning();
 
   const [underwriterUser] = await db.insert(users).values({
     username: "underwriter1",
-    email: "underwriter@zurich.com",
-    fullName: "Michael Chen",
+    password: "password123",
+    name: "Michael Chen",
     role: "underwriter",
-    isActive: true,
   }).returning();
 
   // Seed policies
@@ -47,7 +45,7 @@ export async function seedDatabase() {
     endDate: new Date("2024-12-31"),
     isActive: true,
     claimsHistory: [],
-    riskProfile: "Low",
+    riskProfile: "low",
     renewalDate: new Date("2024-12-01"),
   }).returning();
 
@@ -69,7 +67,7 @@ export async function seedDatabase() {
         status: "Settled"
       }
     ],
-    riskProfile: "Medium",
+    riskProfile: "medium",
     renewalDate: new Date("2025-01-01"),
   }).returning();
 
@@ -81,21 +79,23 @@ export async function seedDatabase() {
         yearsWithCompany: { min: 3 },
         claimsInPeriod: { max: 0, period: "3years" }
       },
-      action: "approve_discount",
+      action: { type: "approve_discount", percentage: 5 },
       priority: 1,
       isActive: true,
-      description: "5% discount for 3+ year clients with no claims"
+      confidence: 0.9,
+      source: "manual"
     },
     {
       ruleType: "coverage_increase",
       conditions: {
-        riskProfile: "Low",
+        riskProfile: "low",
         increasePercentage: { max: 25 }
       },
-      action: "auto_approve",
+      action: { type: "auto_approve" },
       priority: 2,
       isActive: true,
-      description: "Auto-approve coverage increases up to 25% for low-risk clients"
+      confidence: 0.85,
+      source: "manual"
     },
     {
       ruleType: "escalation",
@@ -103,10 +103,11 @@ export async function seedDatabase() {
         coverageAmount: { min: 800000 },
         hasRecentClaims: true
       },
-      action: "escalate_to_senior",
+      action: { type: "escalate_to_senior" },
       priority: 3,
       isActive: true,
-      description: "Escalate high coverage requests for clients with recent claims"
+      confidence: 0.95,
+      source: "manual"
     }
   ]);
 

@@ -30,41 +30,33 @@ export default function Header() {
               </div>
             </Link>
             <nav className="hidden lg:flex space-x-8">
-              <Link href="/">
-                <a className={`text-sm tracking-wide pb-2 transition-colors ${
-                  isActive("/") 
-                    ? "text-primary font-medium border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-900"
-                }`}>
-                  DASHBOARD
-                </a>
+              <Link href="/" className={`text-sm tracking-wide pb-2 transition-colors ${
+                isActive("/") 
+                  ? "text-primary font-medium border-b-2 border-primary" 
+                  : "text-gray-500 hover:text-gray-900"
+              }`}>
+                DASHBOARD
               </Link>
-              <Link href="/chat">
-                <a className={`text-sm tracking-wide pb-2 transition-colors ${
-                  isActive("/chat") 
-                    ? "text-primary font-medium border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-900"
-                }`}>
-                  CHAT
-                </a>
+              <Link href="/chat" className={`text-sm tracking-wide pb-2 transition-colors ${
+                isActive("/chat") 
+                  ? "text-primary font-medium border-b-2 border-primary" 
+                  : "text-gray-500 hover:text-gray-900"
+              }`}>
+                CHAT
               </Link>
-              <Link href="/documents">
-                <a className={`text-sm tracking-wide pb-2 transition-colors ${
-                  isActive("/documents") 
-                    ? "text-primary font-medium border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-900"
-                }`}>
-                  DOCUMENTS
-                </a>
+              <Link href="/documents" className={`text-sm tracking-wide pb-2 transition-colors ${
+                isActive("/documents") 
+                  ? "text-primary font-medium border-b-2 border-primary" 
+                  : "text-gray-500 hover:text-gray-900"
+              }`}>
+                DOCUMENTS
               </Link>
-              <Link href="/analytics">
-                <a className={`text-sm tracking-wide pb-2 transition-colors ${
-                  isActive("/analytics") 
-                    ? "text-primary font-medium border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-900"
-                }`}>
-                  ANALYTICS
-                </a>
+              <Link href="/analytics" className={`text-sm tracking-wide pb-2 transition-colors ${
+                isActive("/analytics") 
+                  ? "text-primary font-medium border-b-2 border-primary" 
+                  : "text-gray-500 hover:text-gray-900"
+              }`}>
+                ANALYTICS
               </Link>
             </nav>
           </div>

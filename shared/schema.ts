@@ -1,84 +1,84 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("broker"), // broker, underwriter, admin
   name: text("name").notNull(),
 });
 
-export const policies = pgTable("policies", {
-  id: serial("id").primaryKey(),
+export const policies = sqliteTable("policies", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   policyNumber: text("policy_number").notNull().unique(),
   clientName: text("client_name").notNull(),
   policyType: text("policy_type").notNull(), // SME, restaurant, tech, etc.
-  premium: integer("premium").notNull(),
-  coverageAmount: integer("coverage_amount").notNull(),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  isActive: boolean("is_active").notNull().default(true),
-  claimsHistory: jsonb("claims_history").notNull().default([]),
+  premium: real("premium").notNull(),
+  coverageAmount: real("coverage_amount").notNull(),
+  startDate: integer("start_date", { mode: "timestamp" }).notNull(),
+  endDate: integer("end_date", { mode: "timestamp" }).notNull(),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  claimsHistory: text("claims_history", { mode: "json" }).notNull().default("[]"),
   riskProfile: text("risk_profile").notNull().default("medium"), // low, medium, high
-  renewalDate: timestamp("renewal_date"),
+  renewalDate: integer("renewal_date", { mode: "timestamp" }),
 });
 
-export const chatMessages = pgTable("chat_messages", {
-  id: serial("id").primaryKey(),
+export const chatMessages = sqliteTable("chat_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   sessionId: text("session_id").notNull(),
   sender: text("sender").notNull(), // broker, ai, underwriter
   message: text("message").notNull(),
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  timestamp: integer("timestamp", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   messageType: text("message_type").notNull().default("text"), // text, decision, escalation
-  metadata: jsonb("metadata").notNull().default({}),
+  metadata: text("metadata", { mode: "json" }).default("{}"),
 });
 
-export const underwritingDecisions = pgTable("underwriting_decisions", {
-  id: serial("id").primaryKey(),
+export const underwritingDecisions = sqliteTable("underwriting_decisions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   policyId: integer("policy_id").references(() => policies.id),
   requestType: text("request_type").notNull(), // discount, amendment, coverage_change
-  requestDetails: jsonb("request_details").notNull(),
+  requestDetails: text("request_details", { mode: "json" }).notNull(),
   decision: text("decision").notNull(), // approved, declined, escalated
   decisionReason: text("decision_reason").notNull(),
-  confidence: integer("confidence").notNull(), // 0-100
+  confidence: real("confidence").notNull(), // 0-1
   processedBy: text("processed_by").notNull(), // ai, human_underwriter
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  timestamp: integer("timestamp", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   responseTime: integer("response_time_ms").notNull(),
 });
 
-export const documents = pgTable("documents", {
-  id: serial("id").primaryKey(),
+export const documents = sqliteTable("documents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   filename: text("filename").notNull(),
   fileType: text("file_type").notNull(), // chat_log, guideline, policy
-  uploadDate: timestamp("upload_date").notNull().defaultNow(),
-  processedDate: timestamp("processed_date"),
+  uploadDate: integer("upload_date", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  processedDate: integer("processed_date", { mode: "timestamp" }),
   status: text("status").notNull().default("pending"), // pending, processing, completed, failed
-  extractedRules: jsonb("extracted_rules").notNull().default([]),
+  extractedRules: text("extracted_rules", { mode: "json" }).notNull().default("[]"),
   content: text("content"),
 });
 
-export const underwritingRules = pgTable("underwriting_rules", {
-  id: serial("id").primaryKey(),
+export const underwritingRules = sqliteTable("underwriting_rules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   ruleType: text("rule_type").notNull(), // discount, coverage, risk_assessment
-  conditions: jsonb("conditions").notNull(),
-  action: jsonb("action").notNull(),
-  confidence: integer("confidence").notNull(),
+  conditions: text("conditions", { mode: "json" }).notNull(),
+  action: text("action", { mode: "json" }).notNull(),
+  confidence: real("confidence").notNull(),
   source: text("source").notNull(), // extracted_from_chat, guideline_document, manual
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
-export const escalations = pgTable("escalations", {
-  id: serial("id").primaryKey(),
+export const escalations = sqliteTable("escalations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   chatMessageId: integer("chat_message_id").references(() => chatMessages.id),
   reason: text("reason").notNull(),
   priority: text("priority").notNull().default("medium"), // low, medium, high
   assignedTo: text("assigned_to"), // underwriter name
   status: text("status").notNull().default("pending"), // pending, in_progress, resolved
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  resolvedAt: timestamp("resolved_at"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  resolvedAt: integer("resolved_at", { mode: "timestamp" }),
 });
 
 // Insert schemas
