@@ -9,6 +9,7 @@ export async function processDocument(documentId: number): Promise<void> {
 
   try {
     await storage.updateDocumentStatus(documentId, "processing");
+    console.log(`Starting processing for document ${documentId}: ${document.filename}`);
 
     let extractedRules: any[] = [];
 
@@ -46,9 +47,10 @@ export async function processDocument(documentId: number): Promise<void> {
     }
 
     await storage.updateDocumentStatus(documentId, "completed", extractedRules);
+    console.log(`Document ${documentId} processing completed. Extracted ${extractedRules.length} rules.`);
   } catch (error) {
     console.error(`Document processing failed for ${documentId}:`, error);
-    await storage.updateDocumentStatus(documentId, "failed");
+    await storage.updateDocumentStatus(documentId, "failed", [], { error: error.message });
     throw error;
   }
 }
