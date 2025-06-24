@@ -278,7 +278,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.documents.values());
   }
 
-  async updateDocumentStatus(id: number, status: string, extractedRules?: any[]): Promise<void> {
+  async updateDocumentStatus(id: number, status: string, extractedRules?: any[], metadata?: any): Promise<void> {
     const document = this.documents.get(id);
     if (document) {
       document.status = status;

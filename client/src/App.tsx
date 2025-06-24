@@ -11,6 +11,7 @@ import ChatPage from "@/pages/ChatPage";
 import DocumentsPage from "@/pages/DocumentsPage";
 import VectorSearch from "@/pages/VectorSearch";
 import AnalyticsPage from "@/pages/AnalyticsPage";
+import DataIngestion from "@/pages/DataIngestion";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/documents" component={DocumentsPage} />
       <Route path="/search" component={VectorSearch} />
       <Route path="/analytics" component={AnalyticsPage} />
+      <Route path="/data-ingestion" component={DataIngestion} />
       <Route component={NotFound} />
     </Switch>
   );
