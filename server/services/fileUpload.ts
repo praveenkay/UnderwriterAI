@@ -74,9 +74,9 @@ export async function processUploadedFile(
     // Generate content hash for deduplication
     const contentHash = crypto.createHash('md5').update(content).digest('hex');
     
-    // Create document record
+    // Create document record with all required fields
     const document = await storage.createDocument({
-      filename: file.filename,
+      filename: file.filename || `upload_${Date.now()}.${ext}`,
       originalFilename: file.originalname,
       fileType,
       uploadedBy: brokerId,
@@ -85,7 +85,7 @@ export async function processUploadedFile(
       content,
       fileSize: file.size,
       contentHash,
-      filePath: file.path,
+      filePath: file.path || null,
       mimeType: file.mimetype,
       extractedRules: [],
       extractedData: {},
@@ -144,7 +144,7 @@ export async function processUploadedFile(
     // Update document status to failed if document was created
     try {
       const document = await storage.createDocument({
-        filename: file.filename,
+        filename: file.filename || `failed_upload_${Date.now()}.txt`,
         originalFilename: file.originalname,
         fileType,
         uploadedBy: brokerId,
@@ -153,7 +153,7 @@ export async function processUploadedFile(
         content: '',
         fileSize: file.size,
         contentHash: '',
-        filePath: file.path,
+        filePath: file.path || null,
         mimeType: file.mimetype,
         extractedRules: [],
         extractedData: { error: error.message },
@@ -175,27 +175,37 @@ export async function processUploadedFile(
 }
 
 async function readFileContent(file: Express.Multer.File): Promise<string> {
+  // Check if file has a valid path
+  if (!file.path) {
+    throw new Error('File path is missing - file upload may have failed');
+  }
+
   const ext = path.extname(file.originalname).toLowerCase();
   
-  switch (ext) {
-    case '.txt':
-    case '.csv':
-    case '.json':
-      return fs.readFileSync(file.path, 'utf-8');
-    
-    case '.pdf':
-      // For PDF files, we'd need a PDF parser like pdf-parse
-      // For now, return a placeholder - in production you'd implement PDF parsing
-      return `PDF file: ${file.originalname} - Content extraction would require PDF parsing library`;
-    
-    case '.doc':
-    case '.docx':
-      // For Word documents, we'd need a library like mammoth
-      // For now, return a placeholder - in production you'd implement Word parsing
-      return `Word document: ${file.originalname} - Content extraction would require Word parsing library`;
-    
-    default:
-      return fs.readFileSync(file.path, 'utf-8');
+  try {
+    switch (ext) {
+      case '.txt':
+      case '.csv':
+      case '.json':
+        return fs.readFileSync(file.path, 'utf-8');
+      
+      case '.pdf':
+        // For PDF files, we'd need a PDF parser like pdf-parse
+        // For now, return a placeholder - in production you'd implement PDF parsing
+        return `PDF file: ${file.originalname} - Content extraction would require PDF parsing library`;
+      
+      case '.doc':
+      case '.docx':
+        // For Word documents, we'd need a library like mammoth
+        // For now, return a placeholder - in production you'd implement Word parsing
+        return `Word document: ${file.originalname} - Content extraction would require Word parsing library`;
+      
+      default:
+        return fs.readFileSync(file.path, 'utf-8');
+    }
+  } catch (error) {
+    console.error('Error reading file:', error);
+    throw new Error(`Failed to read file content: ${error.message}`);
   }
 }
 

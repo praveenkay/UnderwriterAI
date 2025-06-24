@@ -30,6 +30,7 @@ export async function seedDatabase() {
     password: "password123",
     firstName: "Sarah",
     lastName: "Johnson",
+    name: "Sarah Johnson",
     role: "broker",
   }).returning();
 
@@ -38,7 +39,8 @@ export async function seedDatabase() {
     username: "underwriter1",
     password: "password123",
     firstName: "Michael",
-    lastName: "Chen", 
+    lastName: "Chen",
+    name: "Michael Chen",
     role: "underwriter",
   }).returning();
 

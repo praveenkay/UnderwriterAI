@@ -408,18 +408,25 @@ export const storage = new MemStorage();
 export async function initializeStorage() {
   if (!isInitialized) {
     try {
-      // Initialize SQLite database tables
-      initializeSQLiteDatabase();
+      // Try database storage first
+      const { DatabaseStorage } = await import("./db-storage");
+      const dbStorage = new DatabaseStorage();
       
-      // Seed with sample data
+      // Test connection and seed if needed
+      await dbStorage.getAllDocuments();
       await seedDatabase();
+      
+      // Replace in-memory storage with database storage
+      Object.setPrototypeOf(storage, DatabaseStorage.prototype);
+      Object.assign(storage, dbStorage);
+      
       isInitialized = true;
-      console.log("Database initialized and seeded successfully");
+      console.log("Database storage initialized successfully");
+      return storage;
     } catch (error) {
-      console.error("Failed to initialize database:", error);
-      // Fall back to in-memory storage if database fails
-      console.log("Falling back to in-memory storage...");
-      return new MemStorage();
+      console.error("Database initialization failed:", error);
+      console.log("Using in-memory storage as fallback");
+      return storage;
     }
   }
   return storage;
