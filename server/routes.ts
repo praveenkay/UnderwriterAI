@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage, initializeStorage } from "./storage";
 import multer from "multer";
-import WebSocket from "ws";
+import { WebSocketServer } from "ws";
 import { ingestDocument } from "./services/documentIngestion";
 import { generateReport, exportChatSession } from "./services/reportGenerator";
 import { insertChatMessageSchema, insertUnderwritingDecisionSchema, insertDocumentSchema } from "@shared/schema";
@@ -345,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // WebSocket server for real-time chat
   const httpServer = createServer(app);
-  const wss = new WebSocket.Server({ server: httpServer });
+  const wss = new WebSocketServer({ server: httpServer });
 
   wss.on('connection', (ws) => {
     log('New WebSocket connection');

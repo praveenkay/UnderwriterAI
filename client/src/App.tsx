@@ -4,18 +4,20 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/Dashboard";
-import ChatPage from "@/pages/ChatPage";
-import DocumentsPage from "@/pages/DocumentsPage";
-import AnalyticsPage from "@/pages/AnalyticsPage";
+import UserSettings from "@/pages/UserSettings";
+import ChatHistory from "@/pages/ChatHistory";
+import ActivityPage from "@/pages/ActivityPage";
+import DocumentManager from "@/pages/DocumentManager";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
-      <Route path="/chat" component={ChatPage} />
-      <Route path="/documents" component={DocumentsPage} />
-      <Route path="/analytics" component={AnalyticsPage} />
+      <Route path="/settings" component={UserSettings} />
+      <Route path="/chat-history" component={ChatHistory} />
+      <Route path="/activity" component={ActivityPage} />
+      <Route path="/documents" component={DocumentManager} />
       <Route component={NotFound} />
     </Switch>
   );
