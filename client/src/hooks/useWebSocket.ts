@@ -14,6 +14,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    // Don't try to connect WebSocket during development server issues
+    if (window.location.hostname === 'localhost' || window.location.hostname.includes('replit')) {
+      // Skip WebSocket connection for now to prevent rapid reconnection loops
+      return;
+    }
+    
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}`;
     
