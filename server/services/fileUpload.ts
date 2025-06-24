@@ -19,7 +19,8 @@ const storageConfig = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   }
 });
 
@@ -75,8 +76,9 @@ export async function processUploadedFile(
     const contentHash = crypto.createHash('md5').update(content).digest('hex');
     
     // Create document record with all required fields
+    const ext = path.extname(file.originalname);
     const document = await storage.createDocument({
-      filename: file.filename || `upload_${Date.now()}.${ext}`,
+      filename: file.filename || `upload_${Date.now()}${ext}`,
       originalFilename: file.originalname,
       fileType,
       uploadedBy: brokerId,
@@ -175,9 +177,14 @@ export async function processUploadedFile(
 }
 
 async function readFileContent(file: Express.Multer.File): Promise<string> {
-  // Check if file has a valid path
+  // First try to read from the buffer if available (for memory uploads)
+  if (file.buffer) {
+    return file.buffer.toString('utf-8');
+  }
+  
+  // Then try to read from file path (for disk uploads)
   if (!file.path) {
-    throw new Error('File path is missing - file upload may have failed');
+    throw new Error('No file buffer or path available - file upload may have failed');
   }
 
   const ext = path.extname(file.originalname).toLowerCase();
@@ -190,14 +197,10 @@ async function readFileContent(file: Express.Multer.File): Promise<string> {
         return fs.readFileSync(file.path, 'utf-8');
       
       case '.pdf':
-        // For PDF files, we'd need a PDF parser like pdf-parse
-        // For now, return a placeholder - in production you'd implement PDF parsing
         return `PDF file: ${file.originalname} - Content extraction would require PDF parsing library`;
       
       case '.doc':
       case '.docx':
-        // For Word documents, we'd need a library like mammoth
-        // For now, return a placeholder - in production you'd implement Word parsing
         return `Word document: ${file.originalname} - Content extraction would require Word parsing library`;
       
       default:
