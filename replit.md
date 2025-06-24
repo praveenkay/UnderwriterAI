@@ -92,5 +92,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Changelog
 
-Changelog:
-- June 24, 2025. Initial setup
+## Recent Changes
+
+- **June 24, 2025**: Hackathon enhancement for Agentic AI Hyper Challenge
+  - Enhanced document ingestion with advanced rule extraction
+  - Implemented Swiss design inspired UI with clean typography and spacing
+  - Added comprehensive sample data for chat logs and underwriting guidelines
+  - Enhanced broker chat interface with quick action suggestions
+  - Improved metrics dashboard with real-time performance indicators
+  - WebSocket optimization for reduced latency broker interactions
+  - Advanced rule engine with confidence scoring and escalation logic
+
+## Changelog
+
+- June 24, 2025: Initial setup and hackathon enhancements

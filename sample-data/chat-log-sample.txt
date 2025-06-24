@@ -1,0 +1,26 @@
+Sample Chat Log for AgentVerse AI Underwriting Demo
+==================================================
+
+Broker: Hi, I need to apply a 5% renewal discount for ABC Bakery, policy SME-2024-0892. They've been with us for 3 years with no claims.
+
+Underwriter: Let me check their policy details. ABC Bakery has a clean claims history and is up for renewal. Based on our guidelines, clients with no claims for 3+ years are eligible for up to 5% renewal discount. Approved.
+
+Broker: Great! Also, can we increase coverage for City Restaurant from £750k to £900k? Policy SME-2024-1234.
+
+Underwriter: I see City Restaurant had a fire claim in 2023 for £15k. For restaurants with previous fire claims, coverage increases above £800k require manual review and risk assessment. I'll need to escalate this to senior underwriting.
+
+Broker: Understood. What about a 3% loyalty discount for Green Tech Solutions? They've been a client for 5 years.
+
+Underwriter: Green Tech Solutions qualifies for loyalty discount. For clients with 5+ year history and low risk profile, 3% discount is within guidelines. Approved.
+
+Broker: Can I get a quote amendment for Metro Café? They want to add business interruption coverage up to £200k.
+
+Underwriter: Business interruption for restaurants up to £200k is standard. Given Metro Café's low risk profile and current policy, this addition is approved.
+
+Broker: Last question - what's the maximum coverage we can offer for a new tech startup with no claims history?
+
+Underwriter: For new tech businesses, initial maximum coverage is £500k. After 2 years with clean record, we can increase to £1M. Higher amounts require board approval.
+
+Broker: Perfect, that covers everything. Thanks for the quick responses!
+
+Underwriter: You're welcome. All decisions have been logged in the system.

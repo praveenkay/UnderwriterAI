@@ -96,8 +96,8 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="lg:col-span-2">
-      <Card className="shadow-sm border border-gray-200 h-[600px] flex flex-col">
+    <div className="xl:col-span-3">
+      <Card className="swiss-card h-[650px] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -125,16 +125,34 @@ export default function ChatInterface() {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {messages.length === 0 && (
-            <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="h-4 w-4 text-primary" />
+            <div className="space-y-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Bot className="h-4 w-4 text-primary" />
+                </div>
+                <div className="bg-gray-50 rounded-2xl rounded-tl-sm p-4 max-w-md">
+                  <p className="text-gray-900">
+                    Hello! I'm your AI underwriting assistant for Zurich's SME business insurance. I can help you with:
+                  </p>
+                  <ul className="mt-2 text-sm text-gray-700 space-y-1">
+                    <li>• Policy renewals and discounts</li>
+                    <li>• Coverage amendments</li>
+                    <li>• Risk assessments</li>
+                    <li>• Underwriting decisions</li>
+                  </ul>
+                  <p className="text-xs text-gray-500 mt-3">Just now</p>
+                </div>
               </div>
-              <div className="bg-gray-50 rounded-2xl rounded-tl-sm p-4 max-w-md">
-                <p className="text-gray-900">
-                  Hello! I'm your AI underwriting assistant. I can help you with policy inquiries, 
-                  renewal discounts, coverage amendments, and more. How can I assist you today?
-                </p>
-                <p className="text-xs text-gray-500 mt-2">Just now</p>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <button className="btn-swiss text-left p-3 text-sm">
+                  <div className="font-medium text-gray-700">Try: "5% renewal discount for ABC Bakery"</div>
+                  <div className="text-xs text-gray-500 mt-1">Quick renewal request</div>
+                </button>
+                <button className="btn-swiss text-left p-3 text-sm">
+                  <div className="font-medium text-gray-700">Try: "Coverage increase to £900k"</div>
+                  <div className="text-xs text-gray-500 mt-1">Policy amendment</div>
+                </button>
               </div>
             </div>
           )}

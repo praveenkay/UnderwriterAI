@@ -1,0 +1,37 @@
+Zurich SME Underwriting Guidelines - Sample Extract
+===================================================
+
+RENEWAL DISCOUNTS
+- 5% discount available for clients with no claims for 3+ years
+- 7% discount for clients with 5+ years clean history
+- 10% maximum discount for exceptional clients (10+ years, no claims)
+
+COVERAGE LIMITS
+- Standard SME maximum coverage: £1,000,000
+- Restaurant/hospitality maximum: £750,000 (higher with risk assessment)
+- Tech startups: £500,000 initial, £1,000,000 after 2 years
+- Manufacturing: £2,000,000 maximum
+
+RISK ASSESSMENT TRIGGERS
+- Previous fire claims for restaurants require manual review for coverage increases
+- Claims exceeding £50,000 trigger enhanced underwriting
+- High-risk industries (construction, chemicals) require senior approval
+- Coverage increases above 50% of current policy need review
+
+BUSINESS INTERRUPTION
+- Standard coverage up to £200,000 for most SMEs
+- Manufacturing and retail: up to £500,000
+- Restaurants and hospitality: up to £150,000 standard
+
+AUTOMATIC APPROVALS
+- Renewals with no changes: automatic
+- Discounts up to 5% for qualifying clients: automatic
+- Coverage increases up to 25% for low-risk clients: automatic
+- Policy amendments (address, contact details): automatic
+
+ESCALATION REQUIREMENTS
+- Coverage increases above maximum limits
+- Clients with multiple recent claims
+- High-risk industry applications
+- Discounts exceeding standard guidelines
+- Claims history indicates pattern of negligence

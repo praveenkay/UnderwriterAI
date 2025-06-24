@@ -40,7 +40,7 @@ export default function ActivityFeed() {
   return (
     <div className="space-y-6">
       {/* Rules Engine Status */}
-      <Card className="shadow-sm border border-gray-200">
+      <Card className="swiss-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-900">Rules Engine</CardTitle>
         </CardHeader>
@@ -77,7 +77,7 @@ export default function ActivityFeed() {
       </Card>
 
       {/* Quick Actions */}
-      <Card className="shadow-sm border border-gray-200">
+      <Card className="swiss-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
         </CardHeader>
@@ -110,7 +110,7 @@ export default function ActivityFeed() {
       </Card>
 
       {/* Recent Activity */}
-      <Card className="shadow-sm border border-gray-200">
+      <Card className="swiss-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold text-gray-900">Recent Activity</CardTitle>
@@ -152,7 +152,7 @@ export default function ActivityFeed() {
       </Card>
 
       {/* Performance Analytics */}
-      <Card className="shadow-sm border border-gray-200">
+      <Card className="swiss-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold text-gray-900">Performance Analytics</CardTitle>

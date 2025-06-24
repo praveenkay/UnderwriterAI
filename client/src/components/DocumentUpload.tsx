@@ -113,11 +113,14 @@ export default function DocumentUpload() {
   };
 
   return (
-    <Card className="shadow-sm border border-gray-200">
+    <Card className="swiss-card">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-gray-900">Document Ingestion</CardTitle>
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <div>
+            <CardTitle className="text-lg font-medium text-gray-900">Document Ingestion</CardTitle>
+            <p className="text-sm text-gray-500 mt-1">Extract rules from chat logs and guidelines</p>
+          </div>
+          <div className="status-dot status-active"></div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
