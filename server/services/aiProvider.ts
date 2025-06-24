@@ -139,50 +139,113 @@ class OpenAIProvider implements AIProvider {
   }
 
   async extractDocumentRules(content: string, fileType: string): Promise<any[]> {
-    const systemPrompt = `You are an expert underwriting rules extraction system. Extract structured underwriting rules from the provided ${fileType} document. Return a JSON array of rules with the following structure:
-    {
-      "ruleType": "discount|coverage|risk_assessment|amendment",
-      "conditions": { "field": "value", "operator": "equals|greater_than|less_than|contains" },
-      "action": { "type": "approve|decline|escalate|discount", "value": number, "reason": "string" },
-      "confidence": 0.0-1.0,
-      "description": "human readable rule description"
-    }`;
-
-    const response = await this.client.chat.completions.create({
-      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      model: "gpt-4o",
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Extract underwriting rules from this ${fileType}:\n\n${content}` }
-      ],
-      response_format: { type: "json_object" },
-    });
-
     try {
-      const content = response.choices[0].message.content;
-      const parsed = JSON.parse(content || '{}');
-      return parsed.rules || [];
+      // Import tokenManager dynamically to avoid circular imports
+      const { tokenManager } = await import('./tokenManager');
+      
+      const systemPrompt = `You are an expert underwriting rules extraction system. Extract structured underwriting rules from the provided ${fileType} document. Return a JSON array of rules with the following structure:
+      {
+        "ruleType": "discount|coverage|risk_assessment|amendment",
+        "conditions": { "field": "value", "operator": "equals|greater_than|less_than|contains" },
+        "action": { "type": "approve|decline|escalate|discount", "value": number, "reason": "string" },
+        "confidence": 0.0-1.0,
+        "description": "human readable rule description"
+      }`;
+      
+      const contentTokens = tokenManager.estimateTokens(content);
+      const systemTokens = tokenManager.estimateTokens(systemPrompt);
+      const strategy = tokenManager.selectOptimalModel(contentTokens, systemTokens);
+
+      console.log(`OpenAI extractDocumentRules using strategy:`, strategy);
+
+      let allRules: any[] = [];
+
+      if (strategy.shouldChunk) {
+        const chunks = tokenManager.chunkContent(content, strategy.chunkSize!);
+        console.log(`Processing ${chunks.length} chunks for rule extraction`);
+
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          const response = await this.client.chat.completions.create({
+            model: strategy.model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: `Extract underwriting rules from this ${fileType}:\n\n${chunk}` }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.1,
+            max_tokens: 4096
+          });
+
+          try {
+            const responseContent = response.choices[0].message.content;
+            const parsed = JSON.parse(responseContent || '{"rules": []}');
+            allRules.push(...(parsed.rules || []));
+          } catch (parseError) {
+            console.error('Error parsing chunk rules:', parseError);
+          }
+
+          // Small delay between chunks
+          if (i < chunks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+      } else {
+        const response = await this.client.chat.completions.create({
+          model: strategy.model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Extract underwriting rules from this ${fileType}:\n\n${content}` }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.1,
+          max_tokens: 4096
+        });
+
+        try {
+          const responseContent = response.choices[0].message.content;
+          const parsed = JSON.parse(responseContent || '{"rules": []}');
+          allRules = parsed.rules || [];
+        } catch (parseError) {
+          console.error('Error parsing rules:', parseError);
+        }
+      }
+
+      return allRules;
     } catch (error) {
-      console.error('Error parsing rules:', error);
+      console.error('OpenAI rule extraction error:', error);
       return [];
     }
   }
 
   async generateChatResponse(message: string, context: any): Promise<string> {
-    const systemPrompt = `You are an AI underwriting assistant for Zurich Insurance. Help brokers with policy queries, renewals, amendments, and underwriting decisions. Be professional, accurate, and helpful. Use the provided context about policies, rules, and broker history to give relevant responses.
+    try {
+      // Import tokenManager dynamically to avoid circular imports
+      const { tokenManager } = await import('./tokenManager');
+      
+      const systemPrompt = `You are an AI underwriting assistant for Zurich Insurance. Help brokers with policy queries, renewals, amendments, and underwriting decisions. Be professional, accurate, and helpful. Use the provided context about policies, rules, and broker history to give relevant responses.
 
 Context: ${JSON.stringify(context)}`;
+      
+      const totalTokens = tokenManager.estimateTokens(systemPrompt + message);
+      const strategy = tokenManager.selectOptimalModel(totalTokens);
+      console.log(`OpenAI generateChatResponse using model: ${strategy.model}`);
+      
+      const response = await this.client.chat.completions.create({
+        model: strategy.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 1024
+      });
 
-    const response = await this.client.chat.completions.create({
-      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      model: "gpt-4o",
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message }
-      ],
-    });
-
-    return response.choices[0].message.content || '';
+      return response.choices[0].message.content || '';
+    } catch (error) {
+      console.error('OpenAI chat response error:', error);
+      return `Error generating chat response: ${error.message}`;
+    }
   }
 }
 
