@@ -199,6 +199,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vector search endpoints
+  app.post("/api/vector/search", async (req, res) => {
+    try {
+      const { query, limit = 5, filter } = req.body;
+      
+      if (!query) {
+        return res.status(400).json({ error: "Query is required" });
+      }
+
+      const results = await vectorStoreService.searchSimilar(query, limit, filter);
+      
+      res.json({
+        query,
+        total: results.length,
+        results: results
+      });
+    } catch (error) {
+      console.error("Vector search error:", error);
+      res.status(500).json({ error: "Search failed" });
+    }
+  });
+
   // Vector store stats
   app.get("/api/vector/stats", async (req, res) => {
     try {
