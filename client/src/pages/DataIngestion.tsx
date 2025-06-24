@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { RefreshCw, Upload, FileText, CheckCircle, XCircle, Clock, AlertTriangle, Download, Eye, Trash2 } from 'lucide-react';
+import Header from '../components/Header';
 
 interface Document {
   id: number;
@@ -174,13 +175,15 @@ export default function DataIngestion() {
     : 0;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Document Ingestion</h1>
-        <p className="text-muted-foreground">
-          Upload, process, and manage documents for AI analysis and rule extraction
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Header />
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Document Ingestion</h1>
+          <p className="text-muted-foreground">
+            Upload, process, and manage documents for AI analysis and rule extraction
+          </p>
+        </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -494,6 +497,7 @@ export default function DataIngestion() {
         </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

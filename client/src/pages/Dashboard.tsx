@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import Header from "../components/Header";
 import MetricsCards from "../components/MetricsCards";
 import ChatInterface from "../components/ChatInterface";
-import DocumentUpload from "../components/DocumentUpload";
+
 import ActivityFeed from "../components/ActivityFeed";
 
 export default function Dashboard() {
