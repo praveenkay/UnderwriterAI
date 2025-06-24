@@ -225,8 +225,8 @@ function generateInsights(fileType: string, extractedRules: any[], content: stri
     case 'policy':
       insights.push('Policy document processed for coverage terms and conditions');
       break;
-    case 'quote':
-      insights.push('Quote document analyzed for pricing and risk factors');
+    case 'data_export':
+      insights.push('Data export processed for historical patterns and trends');
       break;
   }
   
@@ -235,6 +235,23 @@ function generateInsights(fileType: string, extractedRules: any[], content: stri
   }
   
   return insights;
+}
+
+// Add vector store integration function
+async function addToVectorStore(documentId: number, content: string, metadata: any): Promise<void> {
+  try {
+    const { vectorStoreService } = await import('./vectorStore');
+    
+    await vectorStoreService.addDocument({
+      id: documentId.toString(),
+      content,
+      metadata
+    });
+    
+    console.log(`Document ${documentId} added to vector store successfully`);
+  } catch (error) {
+    console.warn(`Failed to add document ${documentId} to vector store:`, error);
+  }
 }
 
 export async function deleteUploadedFile(filePath: string): Promise<void> {
