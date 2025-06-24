@@ -1,18 +1,13 @@
 import {
   users, policies, chatMessages, underwritingDecisions, documents, underwritingRules, escalations,
-  analyticsEvents, brokerMetrics,
-  type User, type InsertUser, type UpsertUser, type Policy, type InsertPolicy, type ChatMessage, type InsertChatMessage,
+  type User, type InsertUser, type Policy, type InsertPolicy, type ChatMessage, type InsertChatMessage,
   type UnderwritingDecision, type InsertUnderwritingDecision, type Document, type InsertDocument,
-  type UnderwritingRule, type InsertUnderwritingRule, type Escalation, type InsertEscalation,
-  type AnalyticsEvent, type InsertAnalyticsEvent, type BrokerMetrics, type InsertBrokerMetrics
+  type UnderwritingRule, type InsertUnderwritingRule, type Escalation, type InsertEscalation
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
-  // Users (Required for Auth)
-  getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  // Users
+  getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
@@ -27,7 +22,6 @@ export interface IStorage {
   getChatMessagesBySession(sessionId: string): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getAllChatMessages(): Promise<ChatMessage[]>;
-  updateChatMessageAttachments(id: number, attachments: any[]): Promise<void>;
 
   // Underwriting Decisions
   getUnderwritingDecision(id: number): Promise<UnderwritingDecision | undefined>;
@@ -39,8 +33,7 @@ export interface IStorage {
   getDocument(id: number): Promise<Document | undefined>;
   createDocument(document: InsertDocument): Promise<Document>;
   getAllDocuments(): Promise<Document[]>;
-  getDocumentsByBroker(brokerId: string): Promise<Document[]>;
-  updateDocumentStatus(id: number, status: string, extractedRules?: any[], extractedData?: any): Promise<void>;
+  updateDocumentStatus(id: number, status: string, extractedRules?: any[]): Promise<void>;
 
   // Underwriting Rules
   getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined>;
@@ -55,398 +48,373 @@ export interface IStorage {
   updateEscalationStatus(id: number, status: string, assignedTo?: string): Promise<void>;
 
   // Analytics Events
-  createAnalyticsEvent(event: InsertAnalyticsEvent): Promise<AnalyticsEvent>;
-  getAnalyticsEventsByBroker(brokerId: string, limit?: number): Promise<AnalyticsEvent[]>;
+  createAnalyticsEvent(event: any): Promise<any>;
+  getAnalyticsEventsByBroker(brokerId: number, limit?: number): Promise<any[]>;
   
   // Broker Metrics
-  createOrUpdateBrokerMetrics(metrics: InsertBrokerMetrics): Promise<BrokerMetrics>;
-  getBrokerMetrics(brokerId: string, date?: Date): Promise<BrokerMetrics | undefined>;
-  getAllBrokerMetrics(date?: Date): Promise<BrokerMetrics[]>;
+  createOrUpdateBrokerMetrics(metrics: any): Promise<any>;
+  getBrokerMetrics(brokerId: number, date?: Date): Promise<any>;
+  getAllBrokerMetrics(date?: Date): Promise<any[]>;
 }
 
-export class DatabaseStorage implements IStorage {
-  // Users (Required for Auth)
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+export class MemStorage implements IStorage {
+  private users: Map<number, User> = new Map();
+  private policies: Map<number, Policy> = new Map();
+  private chatMessages: Map<number, ChatMessage> = new Map();
+  private underwritingDecisions: Map<number, UnderwritingDecision> = new Map();
+  private documents: Map<number, Document> = new Map();
+  private underwritingRules: Map<number, UnderwritingRule> = new Map();
+  private escalations: Map<number, Escalation> = new Map();
+  private currentId = 1;
+
+  constructor() {
+    this.seedData();
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+  private seedData() {
+    // Seed sample policies for demo
+    const samplePolicies: Policy[] = [
+      {
+        id: 1,
+        policyNumber: "SME-2024-0892",
+        clientName: "ABC Bakery",
+        policyType: "SME Restaurant",
+        premium: 2400,
+        coverageAmount: 500000,
+        startDate: new Date("2024-01-01"),
+        endDate: new Date("2024-12-31"),
+        isActive: true,
+        claimsHistory: [],
+        riskProfile: "low",
+        renewalDate: new Date("2024-12-01")
+      },
+      {
+        id: 2,
+        policyNumber: "SME-2024-1234",
+        clientName: "City Restaurant",
+        policyType: "SME Restaurant",
+        premium: 3600,
+        coverageAmount: 750000,
+        startDate: new Date("2024-01-15"),
+        endDate: new Date("2025-01-14"),
+        isActive: true,
+        claimsHistory: [{ type: "fire", amount: 15000, date: "2023-06-15" }],
+        riskProfile: "high",
+        renewalDate: new Date("2025-01-01")
+      }
+    ];
+
+    samplePolicies.forEach(policy => this.policies.set(policy.id, policy));
+
+    // Seed sample rules
+    const sampleRules: UnderwritingRule[] = [
+      {
+        id: 1,
+        ruleType: "discount",
+        conditions: { claimsHistory: "none_3_years", renewalStatus: "active" },
+        action: { discountType: "renewal", percentage: 5 },
+        confidence: 95,
+        source: "extracted_from_chat",
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: 2,
+        ruleType: "risk_assessment",
+        conditions: { previousClaims: "fire", businessType: "restaurant" },
+        action: { escalate: true, reason: "Complex risk factors require manual review" },
+        confidence: 90,
+        source: "guideline_document",
+        isActive: true,
+        createdAt: new Date()
+      }
+    ];
+
+    sampleRules.forEach(rule => this.underwritingRules.set(rule.id, rule));
+
+    this.currentId = 3;
+  }
+
+  // Users
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    return Array.from(this.users.values()).find(user => user.username === username);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
+    const id = this.currentId++;
+    const user: User = { 
+      ...insertUser, 
+      id,
+      role: insertUser.role || "broker"
+    };
+    this.users.set(id, user);
     return user;
   }
 
   // Policies
   async getPolicy(id: number): Promise<Policy | undefined> {
-    const [policy] = await db.select().from(policies).where(eq(policies.id, id));
-    return policy;
+    return this.policies.get(id);
   }
 
   async getPolicyByNumber(policyNumber: string): Promise<Policy | undefined> {
-    const [policy] = await db.select().from(policies).where(eq(policies.policyNumber, policyNumber));
-    return policy;
+    return Array.from(this.policies.values()).find(policy => policy.policyNumber === policyNumber);
   }
 
   async createPolicy(insertPolicy: InsertPolicy): Promise<Policy> {
-    const [policy] = await db
-      .insert(policies)
-      .values(insertPolicy)
-      .returning();
+    const id = this.currentId++;
+    const policy: Policy = { 
+      ...insertPolicy, 
+      id,
+      isActive: insertPolicy.isActive ?? true,
+      claimsHistory: insertPolicy.claimsHistory || [],
+      riskProfile: insertPolicy.riskProfile || "medium",
+      renewalDate: insertPolicy.renewalDate || null
+    };
+    this.policies.set(id, policy);
     return policy;
   }
 
   async getAllPolicies(): Promise<Policy[]> {
-    return await db.select().from(policies);
+    return Array.from(this.policies.values());
   }
 
   // Chat Messages
   async getChatMessage(id: number): Promise<ChatMessage | undefined> {
-    const [message] = await db.select().from(chatMessages).where(eq(chatMessages.id, id));
-    return message;
+    return this.chatMessages.get(id);
   }
 
   async getChatMessagesBySession(sessionId: string): Promise<ChatMessage[]> {
-    return await db.select().from(chatMessages).where(eq(chatMessages.sessionId, sessionId)).orderBy(chatMessages.timestamp);
+    return Array.from(this.chatMessages.values())
+      .filter(msg => msg.sessionId === sessionId)
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
 
   async createChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
-    const [message] = await db
-      .insert(chatMessages)
-      .values(insertMessage)
-      .returning();
+    const id = this.currentId++;
+    const message: ChatMessage = { 
+      ...insertMessage, 
+      id,
+      timestamp: insertMessage.timestamp || new Date(),
+      messageType: insertMessage.messageType || "text",
+      metadata: insertMessage.metadata || {},
+      policyNumber: insertMessage.policyNumber || null,
+      brokerId: insertMessage.brokerId || null,
+      isArchived: insertMessage.isArchived || false
+    };
+    this.chatMessages.set(id, message);
     return message;
   }
 
   async getAllChatMessages(): Promise<ChatMessage[]> {
-    return await db.select().from(chatMessages).orderBy(desc(chatMessages.timestamp));
-  }
-
-  async updateChatMessageAttachments(id: number, attachments: any[]): Promise<void> {
-    await db.update(chatMessages)
-      .set({ attachments })
-      .where(eq(chatMessages.id, id));
+    return Array.from(this.chatMessages.values());
   }
 
   // Underwriting Decisions
   async getUnderwritingDecision(id: number): Promise<UnderwritingDecision | undefined> {
-    const [decision] = await db.select().from(underwritingDecisions).where(eq(underwritingDecisions.id, id));
-    return decision;
+    return this.underwritingDecisions.get(id);
   }
 
   async createUnderwritingDecision(insertDecision: InsertUnderwritingDecision): Promise<UnderwritingDecision> {
-    const [decision] = await db
-      .insert(underwritingDecisions)
-      .values(insertDecision)
-      .returning();
+    const id = this.currentId++;
+    const decision: UnderwritingDecision = { 
+      ...insertDecision, 
+      id,
+      timestamp: insertDecision.timestamp || new Date(),
+      policyId: insertDecision.policyId || null,
+      sessionId: insertDecision.sessionId || null,
+      brokerId: insertDecision.brokerId || null,
+      rulesApplied: insertDecision.rulesApplied || []
+    };
+    this.underwritingDecisions.set(id, decision);
     return decision;
   }
 
   async getDecisionsByPolicy(policyId: number): Promise<UnderwritingDecision[]> {
-    return await db.select().from(underwritingDecisions).where(eq(underwritingDecisions.policyId, policyId));
+    return Array.from(this.underwritingDecisions.values())
+      .filter(decision => decision.policyId === policyId);
   }
 
   async getRecentDecisions(limit = 10): Promise<UnderwritingDecision[]> {
-    return await db.select().from(underwritingDecisions)
-      .orderBy(desc(underwritingDecisions.timestamp))
-      .limit(limit);
+    return Array.from(this.underwritingDecisions.values())
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, limit);
   }
 
   // Documents
   async getDocument(id: number): Promise<Document | undefined> {
-    const [document] = await db.select().from(documents).where(eq(documents.id, id));
-    return document;
+    return this.documents.get(id);
   }
 
   async createDocument(insertDocument: InsertDocument): Promise<Document> {
-    const [document] = await db
-      .insert(documents)
-      .values(insertDocument)
-      .returning();
+    const id = this.currentId++;
+    const document: Document = { 
+      ...insertDocument, 
+      id,
+      uploadDate: insertDocument.uploadDate || new Date(),
+      status: insertDocument.status || "pending",
+      extractedRules: insertDocument.extractedRules || [],
+      content: insertDocument.content || null,
+      processedDate: insertDocument.processedDate || null,
+      isActive: insertDocument.isActive !== undefined ? insertDocument.isActive : true,
+      uploadedBy: insertDocument.uploadedBy || null,
+      fileSize: insertDocument.fileSize || null,
+      contentHash: insertDocument.contentHash || null
+    };
+    this.documents.set(id, document);
     return document;
   }
 
   async getAllDocuments(): Promise<Document[]> {
-    return await db.select().from(documents).orderBy(desc(documents.uploadDate));
+    return Array.from(this.documents.values());
   }
 
-  async getDocumentsByBroker(brokerId: string): Promise<Document[]> {
-    return await db.select().from(documents).where(eq(documents.uploadedBy, brokerId));
-  }
-
-  async updateDocumentStatus(id: number, status: string, extractedRules?: any[], extractedData?: any): Promise<void> {
-    const updateData: any = { 
-      status, 
-      processedDate: new Date() 
-    };
-    
-    if (extractedRules) {
-      updateData.extractedRules = extractedRules;
+  async updateDocumentStatus(id: number, status: string, extractedRules?: any[]): Promise<void> {
+    const document = this.documents.get(id);
+    if (document) {
+      document.status = status;
+      if (status === "completed") {
+        document.processedDate = new Date();
+      }
+      if (extractedRules) {
+        document.extractedRules = extractedRules;
+      }
     }
-    
-    if (extractedData) {
-      updateData.extractedData = extractedData;
-    }
-
-    await db.update(documents)
-      .set(updateData)
-      .where(eq(documents.id, id));
   }
 
   // Underwriting Rules
   async getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined> {
-    const [rule] = await db.select().from(underwritingRules).where(eq(underwritingRules.id, id));
-    return rule;
+    return this.underwritingRules.get(id);
   }
 
   async createUnderwritingRule(insertRule: InsertUnderwritingRule): Promise<UnderwritingRule> {
-    const [rule] = await db
-      .insert(underwritingRules)
-      .values(insertRule)
-      .returning();
+    const id = this.currentId++;
+    const rule: UnderwritingRule = { 
+      ...insertRule, 
+      id,
+      isActive: insertRule.isActive ?? true,
+      createdAt: insertRule.createdAt || new Date()
+    };
+    this.underwritingRules.set(id, rule);
     return rule;
   }
 
   async getActiveRules(): Promise<UnderwritingRule[]> {
-    return await db.select().from(underwritingRules).where(eq(underwritingRules.isActive, true));
+    return Array.from(this.underwritingRules.values()).filter(rule => rule.isActive);
   }
 
   async getRulesByType(ruleType: string): Promise<UnderwritingRule[]> {
-    return await db.select().from(underwritingRules)
-      .where(and(eq(underwritingRules.ruleType, ruleType), eq(underwritingRules.isActive, true)));
+    return Array.from(this.underwritingRules.values()).filter(rule => rule.ruleType === ruleType);
   }
 
   // Escalations
   async getEscalation(id: number): Promise<Escalation | undefined> {
-    const [escalation] = await db.select().from(escalations).where(eq(escalations.id, id));
-    return escalation;
+    return this.escalations.get(id);
   }
 
   async createEscalation(insertEscalation: InsertEscalation): Promise<Escalation> {
-    const [escalation] = await db
-      .insert(escalations)
-      .values(insertEscalation)
-      .returning();
+    const id = this.currentId++;
+    const escalation: Escalation = { 
+      ...insertEscalation, 
+      id,
+      status: insertEscalation.status || "pending",
+      priority: insertEscalation.priority || "medium",
+      createdAt: insertEscalation.createdAt || new Date(),
+      chatMessageId: insertEscalation.chatMessageId || null,
+      assignedTo: insertEscalation.assignedTo || null,
+      resolvedAt: insertEscalation.resolvedAt || null,
+      brokerId: insertEscalation.brokerId || null,
+      assignedToId: insertEscalation.assignedToId || null,
+      resolutionNotes: insertEscalation.resolutionNotes || null
+    };
+    this.escalations.set(id, escalation);
     return escalation;
   }
 
   async getPendingEscalations(): Promise<Escalation[]> {
-    return await db.select().from(escalations).where(eq(escalations.status, "pending"));
+    return Array.from(this.escalations.values()).filter(e => e.status === "pending");
   }
 
   async updateEscalationStatus(id: number, status: string, assignedTo?: string): Promise<void> {
-    const updateData: any = { status };
-    
-    if (assignedTo) {
-      updateData.assignedTo = assignedTo;
+    const escalation = this.escalations.get(id);
+    if (escalation) {
+      escalation.status = status;
+      if (assignedTo) {
+        escalation.assignedTo = assignedTo;
+      }
+      if (status === "resolved") {
+        escalation.resolvedAt = new Date();
+      }
     }
-    
-    if (status === "resolved") {
-      updateData.resolvedAt = new Date();
-    }
-
-    await db.update(escalations)
-      .set(updateData)
-      .where(eq(escalations.id, id));
   }
 
-  // Analytics Events
-  async createAnalyticsEvent(insertEvent: InsertAnalyticsEvent): Promise<AnalyticsEvent> {
-    const [event] = await db
-      .insert(analyticsEvents)
-      .values(insertEvent)
-      .returning();
-    return event;
+  // Analytics Events - Memory implementation
+  async createAnalyticsEvent(event: any): Promise<any> {
+    const newEvent = { id: this.currentId++, ...event, timestamp: event.timestamp || new Date() };
+    return newEvent;
   }
 
-  async getAnalyticsEventsByBroker(brokerId: string, limit = 100): Promise<AnalyticsEvent[]> {
-    return await db.select().from(analyticsEvents)
-      .where(eq(analyticsEvents.brokerId, brokerId))
-      .orderBy(desc(analyticsEvents.timestamp))
-      .limit(limit);
+  async getAnalyticsEventsByBroker(brokerId: number, limit = 100): Promise<any[]> {
+    return [];
   }
 
-  // Broker Metrics
-  async createOrUpdateBrokerMetrics(insertMetrics: InsertBrokerMetrics): Promise<BrokerMetrics> {
-    const [metrics] = await db
-      .insert(brokerMetrics)
-      .values(insertMetrics)
-      .onConflictDoUpdate({
-        target: [brokerMetrics.brokerId, brokerMetrics.metricDate],
-        set: insertMetrics,
-      })
-      .returning();
-    return metrics;
+  // Broker Metrics - Memory implementation  
+  async createOrUpdateBrokerMetrics(metrics: any): Promise<any> {
+    const newMetrics = { id: this.currentId++, ...metrics };
+    return newMetrics;
   }
 
-  async getBrokerMetrics(brokerId: string, date?: Date): Promise<BrokerMetrics | undefined> {
-    const targetDate = date || new Date();
-    const [metrics] = await db.select().from(brokerMetrics)
-      .where(and(
-        eq(brokerMetrics.brokerId, brokerId),
-        eq(brokerMetrics.metricDate, targetDate)
-      ));
-    return metrics;
+  async getBrokerMetrics(brokerId: number, date?: Date): Promise<any> {
+    return {
+      id: 1,
+      brokerId,
+      brokerName: "Test Broker",
+      metricDate: new Date(),
+      totalChats: 5,
+      totalDecisions: 4,
+      avgResponseTime: 1200,
+      avgConfidence: 0.92,
+      successfulDecisions: 4,
+      escalatedCases: 0,
+      documentsUploaded: 1,
+      activePolicies: 2
+    };
   }
 
-  async getAllBrokerMetrics(date?: Date): Promise<BrokerMetrics[]> {
-    if (date) {
-      return await db.select().from(brokerMetrics)
-        .where(eq(brokerMetrics.metricDate, date));
-    }
-    return await db.select().from(brokerMetrics)
-      .orderBy(desc(brokerMetrics.metricDate));
+  async getAllBrokerMetrics(date?: Date): Promise<any[]> {
+    return [await this.getBrokerMetrics(1)];
   }
 }
+
+import { DatabaseStorage } from "./db-storage";
+import { seedDatabase } from "./seed-data";
+import { initializeSQLiteDatabase } from "./init-sqlite";
+
+// Initialize database with sample data
+let isInitialized = false;
 
 export const storage = new DatabaseStorage();
 
+// Initialize and seed database on first use
 export async function initializeStorage() {
-  try {
-    // Seed some initial data if needed
-    await seedDatabase();
-    console.log("Database initialized and seeded successfully");
-  } catch (error) {
-    console.error("Failed to initialize database:", error);
-    console.log("Falling back to in-memory storage...");
-  }
-}
-
-async function seedDatabase() {
-  // Create sample users
-  const sampleUsers = [
-    {
-      id: "broker_1",
-      email: "john@example.com",
-      firstName: "John",
-      lastName: "Smith",
-      username: "john_broker",
-      password: "password123",
-      role: "broker",
-      name: "John Smith"
-    },
-    {
-      id: "underwriter_1", 
-      email: "sarah@example.com",
-      firstName: "Sarah",
-      lastName: "Johnson",
-      username: "sarah_underwriter",
-      password: "password123",
-      role: "underwriter",
-      name: "Sarah Johnson"
-    }
-  ];
-
-  // Try to create users (will skip if they exist)
-  for (const user of sampleUsers) {
+  if (!isInitialized) {
     try {
-      await storage.upsertUser(user);
+      // Initialize SQLite database tables
+      initializeSQLiteDatabase();
+      
+      // Seed with sample data
+      await seedDatabase();
+      isInitialized = true;
+      console.log("Database initialized and seeded successfully");
     } catch (error) {
-      // User might already exist, continue
+      console.error("Failed to initialize database:", error);
+      // Fall back to in-memory storage if database fails
+      console.log("Falling back to in-memory storage...");
+      return new MemStorage();
     }
   }
-
-  // Create sample policies
-  const samplePolicies = [
-    {
-      policyNumber: "POL-2024-001",
-      clientName: "Tech Solutions Ltd",
-      policyType: "SME",
-      premium: 2500.00,
-      coverageAmount: 500000.00,
-      startDate: new Date("2024-01-01"),
-      endDate: new Date("2024-12-31"),
-      isActive: true,
-      claimsHistory: [
-        { date: "2023-06-15", amount: 15000, type: "Equipment damage" }
-      ],
-      riskProfile: "medium",
-      renewalDate: new Date("2024-11-01")
-    },
-    {
-      policyNumber: "POL-2024-002",
-      clientName: "Cozy Corner Restaurant",
-      policyType: "restaurant",
-      premium: 3200.00,
-      coverageAmount: 750000.00,
-      startDate: new Date("2024-02-01"),
-      endDate: new Date("2025-01-31"),
-      isActive: true,
-      claimsHistory: [],
-      riskProfile: "high",
-      renewalDate: new Date("2024-12-01")
-    }
-  ];
-
-  for (const policy of samplePolicies) {
-    try {
-      await storage.createPolicy(policy);
-    } catch (error) {
-      // Policy might already exist
-    }
-  }
-
-  // Create sample rules
-  const sampleRules = [
-    {
-      ruleType: "discount",
-      conditions: {
-        claimsHistory: "none",
-        renewalStatus: "existing_customer"
-      },
-      action: {
-        discountType: "loyalty",
-        percentage: 10
-      },
-      confidence: 0.9,
-      source: "manual",
-      sourceDocumentId: null,
-      isActive: true
-    },
-    {
-      ruleType: "risk_assessment",
-      conditions: {
-        previousClaims: "high_frequency",
-        businessType: "restaurant"
-      },
-      action: {
-        escalate: true,
-        reason: "High risk profile requires manual review"
-      },
-      confidence: 0.8,
-      source: "manual",
-      sourceDocumentId: null,
-      isActive: true
-    }
-  ];
-
-  for (const rule of sampleRules) {
-    try {
-      await storage.createUnderwritingRule(rule);
-    } catch (error) {
-      // Rule might already exist
-    }
-  }
+  return storage;
 }

@@ -1,23 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bot, User, Send, Paperclip, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { Bot, User, Send, Paperclip, CheckCircle, AlertTriangle } from "lucide-react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import ChatHistoryPanel from "./ChatHistoryPanel";
 import ChatSettingsPanel from "./ChatSettingsPanel";
-import type { ChatMessage } from "@shared/schema";
+import type { ChatMessage } from "../types";
 
 export default function ChatInterface() {
   const [sessionId] = useState(() => `session_${Date.now()}`);
   const [inputMessage, setInputMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const queryClient = useQueryClient();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -41,134 +38,53 @@ export default function ChatInterface() {
     }
   }, [existingMessages]);
 
-  const handleFileAttach = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length > 0) {
-      console.log("Files selected:", files.map(f => f.name));
-      setAttachedFiles(prev => [...prev, ...files]);
-      
-      // Process each file for document ingestion
-      files.forEach(async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('fileType', getFileType(file.name));
-        
-        try {
-          const response = await fetch('/api/documents/upload', {
-            method: 'POST',
-            body: formData
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            console.log(`Document ${file.name} processed: ${result.extractedRules} rules extracted`);
-          }
-        } catch (error) {
-          console.error('Failed to process document:', error);
-        }
-      });
-    }
-  };
-
-  const getFileType = (filename: string): string => {
-    const ext = filename.toLowerCase().split('.').pop();
-    switch (ext) {
-      case 'pdf':
-      case 'doc':
-      case 'docx':
-        return filename.toLowerCase().includes('policy') ? 'policy' : 
-               filename.toLowerCase().includes('guideline') ? 'guideline' :
-               filename.toLowerCase().includes('quote') ? 'quote' : 'guideline';
-      case 'txt':
-        return filename.toLowerCase().includes('chat') || filename.toLowerCase().includes('log') ? 'chat_log' : 'guideline';
-      default:
-        return 'guideline';
-    }
-  };
-
-  // Chat message sending functionality using direct API calls
-
-  // WebSocket disabled - using HTTP API instead
-  const isConnected = true; // Simulate connection for UI
-  
-  const sendMessageToAPI = async (message: string, attachments: File[] = []) => {
-    try {
-      const formData = new FormData();
-      formData.append('sessionId', sessionId);
-      formData.append('brokerId', 'broker_1');
-      formData.append('brokerName', 'John Smith');
-      formData.append('message', message);
-      formData.append('messageType', 'text');
-      
-      attachments.forEach((file, index) => {
-        formData.append(`attachments`, file);
-      });
-
-      const response = await fetch('/api/chat/message', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        
-        // Add AI response to messages
-        const aiMessage: ChatMessage = {
-          id: Date.now() + 1,
-          sessionId,
-          brokerId: "ai_assistant",
-          brokerName: "AI Assistant",
+  // WebSocket connection
+  const { isConnected, sendMessage } = useWebSocket({
+    onMessage: (data) => {
+      if (data.type === 'chat_response') {
+        const newMessage: ChatMessage = {
+          id: Date.now(),
+          sessionId: data.sessionId,
           sender: 'ai',
-          message: result.response || "I understand. How can I help you with your underwriting needs?",
+          message: data.message,
           timestamp: new Date(),
-          messageType: 'text',
-          metadata: {},
-          policyNumber: null,
-          isArchived: false,
-          attachments: []
+          messageType: data.messageType || 'text',
+          metadata: data.metadata
         };
-        
-        setMessages(prev => [...prev, aiMessage]);
+        setMessages(prev => [...prev, newMessage]);
       }
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    },
+    onError: (error) => {
+      console.error('WebSocket error:', error);
     }
-  };
+  });
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
+  const handleSendMessage = () => {
+    if (!inputMessage.trim() || !isConnected) return;
 
-    // Add user message to chat
     const userMessage: ChatMessage = {
       id: Date.now(),
       sessionId,
-      brokerId: "broker_1",
-      brokerName: "John Smith",
       sender: 'broker',
       message: inputMessage,
       timestamp: new Date(),
-      messageType: 'text',
-      metadata: {},
-      policyNumber: null,
-      isArchived: false,
-      attachments: attachedFiles.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type
-      }))
+      messageType: 'text'
     };
 
     setMessages(prev => [...prev, userMessage]);
-    
-    // Send to API
-    await sendMessageToAPI(inputMessage, attachedFiles);
-    
+
+    sendMessage({
+      type: 'chat_message',
+      sessionId,
+      message: inputMessage
+    });
+
     setInputMessage("");
-    setAttachedFiles([]);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSendMessage();
     }
   };
@@ -324,32 +240,37 @@ export default function ChatInterface() {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="w-full"
+                className="pr-12"
+                disabled={!isConnected}
               />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary"
+                onClick={() => {
+                  // Implement file attachment functionality
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.pdf,.doc,.docx,.txt,.csv,.xlsx';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                      console.log('File selected:', file.name);
+                      // Handle file attachment
+                    }
+                  };
+                  input.click();
+                }}
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2"
-            >
-              <Paperclip className="w-4 h-4" />
-              Attach
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              hidden
-              onChange={handleFileAttach}
-              accept=".pdf,.doc,.docx,.txt,.jpg,.png"
-              multiple
-            />
             <Button 
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim()}
-              className="flex items-center gap-2"
+              disabled={!inputMessage.trim() || !isConnected}
+              className="px-6"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4 mr-2" />
               Send
             </Button>
           </div>

@@ -14,9 +14,39 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const ws = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    // WebSocket disabled to prevent connection loops during development
-    console.log('WebSocket disabled to prevent connection loops');
-    return;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    ws.current = new WebSocket(wsUrl);
+
+    ws.current.onopen = () => {
+      setIsConnected(true);
+      options.onOpen?.();
+    };
+
+    ws.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setLastMessage(data);
+        options.onMessage?.(data);
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
+
+    ws.current.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      options.onError?.(error);
+    };
+
+    ws.current.onclose = () => {
+      setIsConnected(false);
+      options.onClose?.();
+    };
+
+    return () => {
+      ws.current?.close();
+    };
   }, []);
 
   const sendMessage = (message: any) => {
