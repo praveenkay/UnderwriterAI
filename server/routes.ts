@@ -10,6 +10,7 @@ import { insertChatMessageSchema, insertDocumentSchema } from "@shared/schema";
 import { upload, processUploadedFile } from "./services/fileUpload";
 import { generateChatHistoryPDF, generateBrokerReportPDF, generateDocumentListPDF } from "./services/pdfGenerator";
 import { aiService } from "./services/aiProvider";
+import { vectorStoreService } from "./services/vectorStore";
 import multer from "multer";
 
 const upload = multer({ 
@@ -170,6 +171,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Settings update error:", error);
       res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
+  // Vector search endpoint
+  app.post("/api/vector/search", async (req, res) => {
+    try {
+      const { query, limit = 5, filters } = req.body;
+      
+      if (!query) {
+        return res.status(400).json({ error: "Query is required" });
+      }
+
+      const results = await vectorStoreService.searchSimilar(query, limit, filters);
+      res.json({
+        query,
+        results: results.map(r => ({
+          content: r.content.substring(0, 500), // Truncate for API response
+          metadata: r.metadata,
+          score: r.score
+        })),
+        total: results.length
+      });
+    } catch (error) {
+      console.error("Vector search error:", error);
+      res.status(500).json({ error: "Search failed" });
+    }
+  });
+
+  // Vector store stats
+  app.get("/api/vector/stats", async (req, res) => {
+    try {
+      const stats = await vectorStoreService.getDocumentStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Vector stats error:", error);
+      res.status(500).json({ error: "Failed to fetch vector store stats" });
     }
   });
 
