@@ -25,16 +25,20 @@ export async function seedDatabase() {
 
   // Seed users
   const [brokerUser] = await db.insert(users).values({
+    id: "broker1",
     username: "broker1",
     password: "password123",
-    name: "Sarah Johnson",
+    firstName: "Sarah",
+    lastName: "Johnson",
     role: "broker",
   }).returning();
 
   const [underwriterUser] = await db.insert(users).values({
+    id: "underwriter1",
     username: "underwriter1",
     password: "password123",
-    name: "Michael Chen",
+    firstName: "Michael",
+    lastName: "Chen", 
     role: "underwriter",
   }).returning();
 
@@ -51,6 +55,7 @@ export async function seedDatabase() {
     claimsHistory: [],
     riskProfile: "low",
     renewalDate: new Date("2024-12-01"),
+    createdAt: new Date(),
   }).returning();
 
   const [policy2] = await db.insert(policies).values({
@@ -73,6 +78,7 @@ export async function seedDatabase() {
     ],
     riskProfile: "medium",
     renewalDate: new Date("2025-01-01"),
+    createdAt: new Date(),
   }).returning();
 
   // Seed underwriting rules
@@ -87,7 +93,9 @@ export async function seedDatabase() {
       priority: 1,
       isActive: true,
       confidence: 0.9,
-      source: "manual"
+      source: "manual",
+      sourceDocumentId: null,
+      createdAt: new Date()
     },
     {
       ruleType: "coverage_increase",
@@ -99,7 +107,9 @@ export async function seedDatabase() {
       priority: 2,
       isActive: true,
       confidence: 0.85,
-      source: "manual"
+      source: "manual",
+      sourceDocumentId: null,
+      createdAt: new Date()
     },
     {
       ruleType: "escalation",
@@ -111,7 +121,9 @@ export async function seedDatabase() {
       priority: 3,
       isActive: true,
       confidence: 0.95,
-      source: "manual"
+      source: "manual",
+      sourceDocumentId: null,
+      createdAt: new Date()
     }
   ]);
 
