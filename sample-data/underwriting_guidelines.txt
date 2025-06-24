@@ -1,0 +1,94 @@
+ZURICH INSURANCE SME UNDERWRITING GUIDELINES
+
+1. RENEWAL DISCOUNT POLICIES
+
+For clients with clean claims history (no claims in past 2 years):
+- Standard renewal discount: 10%
+- Loyalty discount (3+ years): Additional 5%
+- Risk profile improvement: Additional 2-5%
+
+Restaurant businesses are eligible for:
+- Equipment upgrade discount: 7% if kitchen equipment modernized
+- Safety certification discount: 8% for fire safety compliance
+- Staff training discount: 5% for food safety training completion
+
+2. RISK ASSESSMENT CRITERIA
+
+High-risk indicators requiring escalation:
+- Previous claims exceeding £50,000
+- Business operating in flood-prone areas
+- Manufacturing with hazardous materials
+- Hospitality venues with alcohol licensing issues
+
+Medium-risk adjustments:
+- Retail businesses: Standard rates with security requirements
+- Professional services: Reduced rates for established practices
+- Technology companies: Cyber security requirements mandatory
+
+3. COVERAGE AMENDMENT RULES
+
+Property coverage increases:
+- Up to 20% increase: Automatic approval
+- 20-50% increase: Manager approval required
+- Above 50%: Underwriter review mandatory
+
+Liability coverage adjustments:
+- Professional indemnity: Minimum £1M for consultancy
+- Public liability: £2M minimum for retail operations
+- Product liability: Industry-specific requirements apply
+
+4. ESCALATION PROCEDURES
+
+Immediate escalation required for:
+- Claims history showing pattern of losses
+- Business expansion into new territories
+- Change of business use or industry classification
+- Premium increases exceeding 25%
+
+Standard escalation process:
+1. Senior underwriter review
+2. Risk committee assessment if above £100K exposure
+3. Regional manager approval for policy exceptions
+4. Head office approval for high-value/complex risks
+
+5. AUTOMATED DECISION THRESHOLDS
+
+Auto-approve renewals when:
+- No claims in past 3 years
+- Premium under £5,000
+- No significant business changes
+- Risk profile stable or improved
+
+Require manual review when:
+- New claims reported since last renewal
+- Business premises changed
+- Ownership or management changes
+- Industry risk profile changes
+
+6. SPECIAL CONSIDERATIONS
+
+Seasonal businesses:
+- Adjusted premium payment schedules available
+- Coverage can be suspended during off-season
+- Minimum annual premium applies
+
+Multi-location businesses:
+- Aggregated risk assessment required
+- Location-specific adjustments apply
+- Catastrophe risk modeling necessary
+
+Technology sector:
+- Cyber insurance mandatory for data processors
+- Professional indemnity scaled to revenue
+- Business interruption coverage critical
+
+Manufacturing sector:
+- Environmental liability assessment required
+- Product recall coverage recommended
+- Supply chain risk evaluation mandatory
+
+This document serves as the primary reference for underwriting decisions in the SME division. All underwriters must familiarize themselves with these guidelines and escalate any decisions outside standard parameters.
+
+Last updated: January 2025
+Review date: July 2025
+Authority level: Senior Underwriting Manager

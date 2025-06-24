@@ -9,6 +9,7 @@ import DocumentLibrary from "@/pages/DocumentLibrary";
 import ActivityDetails from "@/pages/ActivityDetails";
 import ChatPage from "@/pages/ChatPage";
 import DocumentsPage from "@/pages/DocumentsPage";
+import VectorSearch from "@/pages/VectorSearch";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import NotFound from "@/pages/not-found";
 
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/chat" component={ChatPage} />
       <Route path="/documents" component={DocumentsPage} />
+      <Route path="/search" component={VectorSearch} />
       <Route path="/analytics" component={AnalyticsPage} />
       <Route component={NotFound} />
     </Switch>
