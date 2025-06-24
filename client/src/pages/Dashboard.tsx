@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import Header from "../components/Header";
 import MetricsCards from "../components/MetricsCards";
 import ChatInterface from "../components/ChatInterface";
@@ -5,6 +6,14 @@ import DocumentUpload from "../components/DocumentUpload";
 import ActivityFeed from "../components/ActivityFeed";
 
 export default function Dashboard() {
+  useEffect(() => {
+    // Scroll to header when page loads
+    const headerElement = document.getElementById('header');
+    if (headerElement) {
+      headerElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Header />
@@ -23,6 +32,11 @@ export default function Dashboard() {
 
         <MetricsCards />
         
+        {/* AI Chat Assistant - moved below metrics cards */}
+        <div className="grid grid-cols-1 gap-8 mt-8 mb-8">
+          <ChatInterface />
+        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 mb-8">
           <div className="lg:col-span-2">
             <ActivityFeed />
@@ -31,10 +45,6 @@ export default function Dashboard() {
           <div className="lg:col-span-1">
             <DocumentUpload />
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-8">
-          <ChatInterface />
         </div>
         
         {/* Swiss Design Footer Info */}
