@@ -243,6 +243,166 @@ Context: ${JSON.stringify(context)}`;
   }
 }
 
+class OpenRouterProvider implements AIProvider {
+  name = 'OpenRouter';
+
+  constructor() {
+    if (!process.env.OPENROUTER_API_KEY) {
+      throw new Error('OPENROUTER_API_KEY environment variable is required');
+    }
+  }
+
+  async generateResponse(messages: any[], systemPrompt?: string): Promise<string> {
+    try {
+      const requestMessages = [];
+      
+      if (systemPrompt) {
+        requestMessages.push({ role: 'system', content: systemPrompt });
+      }
+      
+      requestMessages.push(...messages.map(msg => ({
+        role: msg.sender === 'ai' ? 'assistant' : 'user',
+        content: msg.message || msg.content
+      })));
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'https://agentverse.replit.app',
+          'X-Title': 'AgentVerse Underwriting Assistant',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3.5-sonnet',
+          messages: requestMessages,
+          max_tokens: 1000,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0]?.message?.content || 'No response generated';
+    } catch (error) {
+      console.error('OpenRouter API error:', error);
+      throw new Error(`Failed to generate response: ${error.message}`);
+    }
+  }
+
+  async extractDocumentRules(content: string, fileType: string): Promise<any[]> {
+    try {
+      const systemPrompt = `You are an expert at extracting underwriting rules from insurance documents. 
+Analyze the following ${fileType} content and extract any underwriting rules, guidelines, or decision criteria.
+Return a JSON array of rules with this structure:
+[{
+  "ruleType": "discount|coverage_change|risk_assessment|escalation",
+  "conditions": "specific conditions that trigger this rule",
+  "action": "what action to take when conditions are met",
+  "confidence": 0.85,
+  "source": "document_extraction"
+}]`;
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'https://agentverse.replit.app',
+          'X-Title': 'AgentVerse Document Analysis',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3.5-sonnet',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Analyze this ${fileType} content:\n\n${content.substring(0, 8000)}` }
+          ],
+          max_tokens: 2000,
+          temperature: 0.3
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const responseText = data.choices[0]?.message?.content || '[]';
+      
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        console.warn('Failed to parse rules JSON, extracting from text');
+        return [{
+          ruleType: 'general',
+          conditions: 'Document analysis',
+          action: responseText.substring(0, 200),
+          confidence: 0.5,
+          source: 'document_extraction'
+        }];
+      }
+    } catch (error) {
+      console.error('OpenRouter rule extraction error:', error);
+      return [];
+    }
+  }
+
+  async generateChatResponse(message: string, context: any): Promise<string> {
+    try {
+      const systemPrompt = `You are an AI underwriting assistant for Zurich Insurance's SME business operations.
+Help brokers with policy renewals, coverage amendments, risk assessments, and underwriting decisions.
+Be professional, concise, and provide actionable insights.
+
+Current context:
+- Broker: ${context.brokerName || 'Unknown'}
+- Recent policies: ${context.policies?.length || 0}
+- Session: ${context.currentSession || 'New'}
+${context.vectorContext ? `\nRelevant document context:\n${context.vectorContext}` : ''}
+
+Respond helpfully to underwriting queries, policy questions, and provide decision support.`;
+
+      const recentMessages = context.recentMessages || [];
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        ...recentMessages.slice(-3).map((msg: any) => ({
+          role: msg.sender === 'ai' ? 'assistant' : 'user',
+          content: msg.message
+        })),
+        { role: 'user', content: message }
+      ];
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'https://agentverse.replit.app',
+          'X-Title': 'AgentVerse Chat Assistant',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3.5-sonnet',
+          messages: messages,
+          max_tokens: 800,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0]?.message?.content || 'I apologize, but I encountered an issue generating a response. Please try again.';
+    } catch (error) {
+      console.error('OpenRouter chat error:', error);
+      return 'I\'m experiencing technical difficulties. Please try again or contact support.';
+    }
+  }
+}
+
 export class AIService {
   private providers: Map<string, AIProvider> = new Map();
   private currentProvider: AIProvider;
