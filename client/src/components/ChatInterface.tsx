@@ -269,6 +269,5 @@ export default function ChatInterface() {
           </p>
         </div>
       </Card>
-    </div>
   );
 }
