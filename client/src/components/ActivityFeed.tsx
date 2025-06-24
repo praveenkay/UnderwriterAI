@@ -42,7 +42,7 @@ export default function ActivityFeed() {
       {/* Rules Engine Status */}
       <Card className="swiss-card">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900">Rules Engine</CardTitle>
+          <CardTitle className="text-lg font-medium text-gray-900">System Status</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
@@ -79,7 +79,7 @@ export default function ActivityFeed() {
       {/* Quick Actions */}
       <Card className="swiss-card">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
+          <CardTitle className="text-lg font-medium text-gray-900">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <Button variant="ghost" className="w-full justify-between p-3 h-auto">
@@ -113,7 +113,7 @@ export default function ActivityFeed() {
       <Card className="swiss-card">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold text-gray-900">Recent Activity</CardTitle>
+            <CardTitle className="text-lg font-medium text-gray-900">Recent Activity</CardTitle>
             <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">
               View All
             </Button>
@@ -155,7 +155,7 @@ export default function ActivityFeed() {
       <Card className="swiss-card">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold text-gray-900">Performance Analytics</CardTitle>
+            <CardTitle className="text-lg font-medium text-gray-900">Performance Analytics</CardTitle>
             <select className="text-sm border border-gray-300 rounded-lg px-3 py-1">
               <option>Last 7 days</option>
               <option>Last 30 days</option>

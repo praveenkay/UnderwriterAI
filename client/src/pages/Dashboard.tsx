@@ -11,27 +11,30 @@ export default function Dashboard() {
       
       <div className="max-w-7xl mx-auto px-8 py-12">
         {/* Hero Section */}
-        <div className="mb-12">
+        <div className="mb-8">
           <h1 className="text-3xl font-medium text-gray-900 tracking-tight mb-3">
-            AI Underwriting Assistant
+            AgentVerse Dashboard
           </h1>
           <p className="text-gray-600 text-lg leading-relaxed max-w-2xl">
-            Streamline broker interactions with intelligent automation, instant decision-making, 
-            and comprehensive policy management for Zurich's SME business insurance.
+            AI-powered underwriting assistant for SME business insurance. View analytics, 
+            manage documents, and engage with the AI assistant below.
           </p>
         </div>
 
         <MetricsCards />
         
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8 mt-12">
-          <div className="xl:col-span-3">
-            <ChatInterface />
-          </div>
-          
-          <div className="xl:col-span-2 space-y-8">
-            <DocumentUpload />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 mb-8">
+          <div className="lg:col-span-2">
             <ActivityFeed />
           </div>
+          
+          <div className="lg:col-span-1">
+            <DocumentUpload />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-8">
+          <ChatInterface />
         </div>
         
         {/* Swiss Design Footer Info */}

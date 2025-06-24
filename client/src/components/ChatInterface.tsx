@@ -96,8 +96,7 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="xl:col-span-3">
-      <Card className="swiss-card h-[650px] flex flex-col">
+    <Card className="swiss-card h-[500px] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
