@@ -1,3 +1,4 @@
+import React from "react";
 import { Link, useLocation } from "wouter";
 import NotificationsPanel from "./NotificationsPanel";
 import UserProfilePanel from "./UserProfilePanel";

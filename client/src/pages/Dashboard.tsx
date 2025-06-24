@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import Header from "../components/Header";
 import MetricsCards from "../components/MetricsCards";
 import ChatInterface from "../components/ChatInterface";

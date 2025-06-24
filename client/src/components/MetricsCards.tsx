@@ -1,3 +1,4 @@
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, Bot, Star, TrendingUp, ArrowDown, ArrowUp } from "lucide-react";
