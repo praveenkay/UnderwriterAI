@@ -330,4 +330,23 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from "./db-storage";
+import { seedDatabase } from "./seed-data";
+
+// Initialize database with sample data
+let isSeeded = false;
+
+export const storage = new DatabaseStorage();
+
+// Seed database on first use
+export async function initializeStorage() {
+  if (!isSeeded) {
+    try {
+      await seedDatabase();
+      isSeeded = true;
+    } catch (error) {
+      console.error("Failed to seed database:", error);
+    }
+  }
+  return storage;
+}

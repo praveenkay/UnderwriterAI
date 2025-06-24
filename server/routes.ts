@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
-import { storage } from "./storage";
+import { storage, initializeStorage } from "./storage";
 import { evaluateUnderwritingRequest } from "./services/ruleEngine";
 import { generateChatResponse } from "./services/openai";
 import { uploadAndProcessDocument } from "./services/documentProcessor";
@@ -15,6 +15,8 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize database
+  await initializeStorage();
   const httpServer = createServer(app);
   const wss = new WebSocketServer({ 
     server: httpServer,
