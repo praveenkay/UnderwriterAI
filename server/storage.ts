@@ -1,0 +1,289 @@
+import {
+  users, policies, chatMessages, underwritingDecisions, documents, underwritingRules, escalations,
+  type User, type InsertUser, type Policy, type InsertPolicy, type ChatMessage, type InsertChatMessage,
+  type UnderwritingDecision, type InsertUnderwritingDecision, type Document, type InsertDocument,
+  type UnderwritingRule, type InsertUnderwritingRule, type Escalation, type InsertEscalation
+} from "@shared/schema";
+
+export interface IStorage {
+  // Users
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+
+  // Policies
+  getPolicy(id: number): Promise<Policy | undefined>;
+  getPolicyByNumber(policyNumber: string): Promise<Policy | undefined>;
+  createPolicy(policy: InsertPolicy): Promise<Policy>;
+  getAllPolicies(): Promise<Policy[]>;
+
+  // Chat Messages
+  getChatMessage(id: number): Promise<ChatMessage | undefined>;
+  getChatMessagesBySession(sessionId: string): Promise<ChatMessage[]>;
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  getAllChatMessages(): Promise<ChatMessage[]>;
+
+  // Underwriting Decisions
+  getUnderwritingDecision(id: number): Promise<UnderwritingDecision | undefined>;
+  createUnderwritingDecision(decision: InsertUnderwritingDecision): Promise<UnderwritingDecision>;
+  getDecisionsByPolicy(policyId: number): Promise<UnderwritingDecision[]>;
+  getRecentDecisions(limit?: number): Promise<UnderwritingDecision[]>;
+
+  // Documents
+  getDocument(id: number): Promise<Document | undefined>;
+  createDocument(document: InsertDocument): Promise<Document>;
+  getAllDocuments(): Promise<Document[]>;
+  updateDocumentStatus(id: number, status: string, extractedRules?: any[]): Promise<void>;
+
+  // Underwriting Rules
+  getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined>;
+  createUnderwritingRule(rule: InsertUnderwritingRule): Promise<UnderwritingRule>;
+  getActiveRules(): Promise<UnderwritingRule[]>;
+  getRulesByType(ruleType: string): Promise<UnderwritingRule[]>;
+
+  // Escalations
+  getEscalation(id: number): Promise<Escalation | undefined>;
+  createEscalation(escalation: InsertEscalation): Promise<Escalation>;
+  getPendingEscalations(): Promise<Escalation[]>;
+  updateEscalationStatus(id: number, status: string, assignedTo?: string): Promise<void>;
+}
+
+export class MemStorage implements IStorage {
+  private users: Map<number, User> = new Map();
+  private policies: Map<number, Policy> = new Map();
+  private chatMessages: Map<number, ChatMessage> = new Map();
+  private underwritingDecisions: Map<number, UnderwritingDecision> = new Map();
+  private documents: Map<number, Document> = new Map();
+  private underwritingRules: Map<number, UnderwritingRule> = new Map();
+  private escalations: Map<number, Escalation> = new Map();
+  private currentId = 1;
+
+  constructor() {
+    this.seedData();
+  }
+
+  private seedData() {
+    // Seed sample policies for demo
+    const samplePolicies: Policy[] = [
+      {
+        id: 1,
+        policyNumber: "SME-2024-0892",
+        clientName: "ABC Bakery",
+        policyType: "SME Restaurant",
+        premium: 2400,
+        coverageAmount: 500000,
+        startDate: new Date("2024-01-01"),
+        endDate: new Date("2024-12-31"),
+        isActive: true,
+        claimsHistory: [],
+        riskProfile: "low",
+        renewalDate: new Date("2024-12-01")
+      },
+      {
+        id: 2,
+        policyNumber: "SME-2024-1234",
+        clientName: "City Restaurant",
+        policyType: "SME Restaurant",
+        premium: 3600,
+        coverageAmount: 750000,
+        startDate: new Date("2024-01-15"),
+        endDate: new Date("2025-01-14"),
+        isActive: true,
+        claimsHistory: [{ type: "fire", amount: 15000, date: "2023-06-15" }],
+        riskProfile: "high",
+        renewalDate: new Date("2025-01-01")
+      }
+    ];
+
+    samplePolicies.forEach(policy => this.policies.set(policy.id, policy));
+
+    // Seed sample rules
+    const sampleRules: UnderwritingRule[] = [
+      {
+        id: 1,
+        ruleType: "discount",
+        conditions: { claimsHistory: "none_3_years", renewalStatus: "active" },
+        action: { discountType: "renewal", percentage: 5 },
+        confidence: 95,
+        source: "extracted_from_chat",
+        isActive: true,
+        createdAt: new Date()
+      },
+      {
+        id: 2,
+        ruleType: "risk_assessment",
+        conditions: { previousClaims: "fire", businessType: "restaurant" },
+        action: { escalate: true, reason: "Complex risk factors require manual review" },
+        confidence: 90,
+        source: "guideline_document",
+        isActive: true,
+        createdAt: new Date()
+      }
+    ];
+
+    sampleRules.forEach(rule => this.underwritingRules.set(rule.id, rule));
+
+    this.currentId = 3;
+  }
+
+  // Users
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.username === username);
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = this.currentId++;
+    const user: User = { ...insertUser, id };
+    this.users.set(id, user);
+    return user;
+  }
+
+  // Policies
+  async getPolicy(id: number): Promise<Policy | undefined> {
+    return this.policies.get(id);
+  }
+
+  async getPolicyByNumber(policyNumber: string): Promise<Policy | undefined> {
+    return Array.from(this.policies.values()).find(policy => policy.policyNumber === policyNumber);
+  }
+
+  async createPolicy(insertPolicy: InsertPolicy): Promise<Policy> {
+    const id = this.currentId++;
+    const policy: Policy = { ...insertPolicy, id };
+    this.policies.set(id, policy);
+    return policy;
+  }
+
+  async getAllPolicies(): Promise<Policy[]> {
+    return Array.from(this.policies.values());
+  }
+
+  // Chat Messages
+  async getChatMessage(id: number): Promise<ChatMessage | undefined> {
+    return this.chatMessages.get(id);
+  }
+
+  async getChatMessagesBySession(sessionId: string): Promise<ChatMessage[]> {
+    return Array.from(this.chatMessages.values())
+      .filter(msg => msg.sessionId === sessionId)
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  }
+
+  async createChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
+    const id = this.currentId++;
+    const message: ChatMessage = { ...insertMessage, id };
+    this.chatMessages.set(id, message);
+    return message;
+  }
+
+  async getAllChatMessages(): Promise<ChatMessage[]> {
+    return Array.from(this.chatMessages.values());
+  }
+
+  // Underwriting Decisions
+  async getUnderwritingDecision(id: number): Promise<UnderwritingDecision | undefined> {
+    return this.underwritingDecisions.get(id);
+  }
+
+  async createUnderwritingDecision(insertDecision: InsertUnderwritingDecision): Promise<UnderwritingDecision> {
+    const id = this.currentId++;
+    const decision: UnderwritingDecision = { ...insertDecision, id };
+    this.underwritingDecisions.set(id, decision);
+    return decision;
+  }
+
+  async getDecisionsByPolicy(policyId: number): Promise<UnderwritingDecision[]> {
+    return Array.from(this.underwritingDecisions.values())
+      .filter(decision => decision.policyId === policyId);
+  }
+
+  async getRecentDecisions(limit = 10): Promise<UnderwritingDecision[]> {
+    return Array.from(this.underwritingDecisions.values())
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, limit);
+  }
+
+  // Documents
+  async getDocument(id: number): Promise<Document | undefined> {
+    return this.documents.get(id);
+  }
+
+  async createDocument(insertDocument: InsertDocument): Promise<Document> {
+    const id = this.currentId++;
+    const document: Document = { ...insertDocument, id };
+    this.documents.set(id, document);
+    return document;
+  }
+
+  async getAllDocuments(): Promise<Document[]> {
+    return Array.from(this.documents.values());
+  }
+
+  async updateDocumentStatus(id: number, status: string, extractedRules?: any[]): Promise<void> {
+    const document = this.documents.get(id);
+    if (document) {
+      document.status = status;
+      if (status === "completed") {
+        document.processedDate = new Date();
+      }
+      if (extractedRules) {
+        document.extractedRules = extractedRules;
+      }
+    }
+  }
+
+  // Underwriting Rules
+  async getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined> {
+    return this.underwritingRules.get(id);
+  }
+
+  async createUnderwritingRule(insertRule: InsertUnderwritingRule): Promise<UnderwritingRule> {
+    const id = this.currentId++;
+    const rule: UnderwritingRule = { ...insertRule, id };
+    this.underwritingRules.set(id, rule);
+    return rule;
+  }
+
+  async getActiveRules(): Promise<UnderwritingRule[]> {
+    return Array.from(this.underwritingRules.values()).filter(rule => rule.isActive);
+  }
+
+  async getRulesByType(ruleType: string): Promise<UnderwritingRule[]> {
+    return Array.from(this.underwritingRules.values()).filter(rule => rule.ruleType === ruleType);
+  }
+
+  // Escalations
+  async getEscalation(id: number): Promise<Escalation | undefined> {
+    return this.escalations.get(id);
+  }
+
+  async createEscalation(insertEscalation: InsertEscalation): Promise<Escalation> {
+    const id = this.currentId++;
+    const escalation: Escalation = { ...insertEscalation, id };
+    this.escalations.set(id, escalation);
+    return escalation;
+  }
+
+  async getPendingEscalations(): Promise<Escalation[]> {
+    return Array.from(this.escalations.values()).filter(e => e.status === "pending");
+  }
+
+  async updateEscalationStatus(id: number, status: string, assignedTo?: string): Promise<void> {
+    const escalation = this.escalations.get(id);
+    if (escalation) {
+      escalation.status = status;
+      if (assignedTo) {
+        escalation.assignedTo = assignedTo;
+      }
+      if (status === "resolved") {
+        escalation.resolvedAt = new Date();
+      }
+    }
+  }
+}
+
+export const storage = new MemStorage();
