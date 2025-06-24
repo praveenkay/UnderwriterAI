@@ -7,6 +7,9 @@ import { generateChatResponse } from "./services/openai";
 import { uploadAndProcessDocument } from "./services/documentProcessor";
 import { ingestChatLog, ingestGuidelineDocument, getIngestionMetrics } from "./services/documentIngestion";
 import { insertChatMessageSchema, insertDocumentSchema } from "@shared/schema";
+import { upload, processUploadedFile } from "./services/fileUpload";
+import { generateChatHistoryPDF, generateBrokerReportPDF, generateDocumentListPDF } from "./services/pdfGenerator";
+import { aiService } from "./services/aiProvider";
 import multer from "multer";
 
 const upload = multer({ 
@@ -15,8 +18,198 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const CURRENT_BROKER_ID = "broker_001";
+  const CURRENT_BROKER_NAME = "John Smith";
+
   // Initialize database
   await initializeStorage();
+
+  // AI Provider routes
+  app.get("/api/ai/providers", (req, res) => {
+    res.json({
+      current: aiService.getCurrentProvider(),
+      available: aiService.getAvailableProviders()
+    });
+  });
+
+  app.post("/api/ai/provider", (req, res) => {
+    const { provider } = req.body;
+    const success = aiService.setProvider(provider);
+    if (success) {
+      res.json({ success: true, current: aiService.getCurrentProvider() });
+    } else {
+      res.status(400).json({ error: "Invalid provider or provider not available" });
+    }
+  });
+
+  // File upload routes
+  app.post("/api/upload", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const { fileType = 'document' } = req.body;
+      
+      const result = await processUploadedFile(
+        req.file,
+        CURRENT_BROKER_ID,
+        CURRENT_BROKER_NAME,
+        fileType
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("Upload error:", error);
+      res.status(500).json({ error: "File upload failed" });
+    }
+  });
+
+  // Document routes
+  app.get("/api/documents/:id/download", async (req, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const document = await storage.getDocument(documentId);
+      
+      if (!document || !document.filePath) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      res.download(document.filePath, document.originalFilename);
+    } catch (error) {
+      console.error("Download error:", error);
+      res.status(500).json({ error: "Download failed" });
+    }
+  });
+
+  // PDF generation routes
+  app.get("/api/reports/chat-history/:sessionId", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const pdfBuffer = await generateChatHistoryPDF(sessionId, CURRENT_BROKER_ID);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="chat-history-${sessionId}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      res.status(500).json({ error: "PDF generation failed" });
+    }
+  });
+
+  app.get("/api/reports/broker-performance", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+
+      const [decisions, documents, analytics] = await Promise.all([
+        storage.getRecentDecisions(50),
+        storage.getAllDocuments(),
+        storage.getBrokerMetrics?.(CURRENT_BROKER_ID)
+      ]);
+
+      const reportData = {
+        title: "Broker Performance Report",
+        dateRange: { start, end },
+        brokerId: CURRENT_BROKER_ID,
+        brokerName: CURRENT_BROKER_NAME,
+        decisions: decisions.filter(d => d.brokerId === CURRENT_BROKER_ID),
+        documents: documents.filter(d => d.uploadedBy === CURRENT_BROKER_ID),
+        analytics
+      };
+
+      const pdfBuffer = await generateBrokerReportPDF(reportData);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="broker-performance-report.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Report generation error:", error);
+      res.status(500).json({ error: "Report generation failed" });
+    }
+  });
+
+  app.get("/api/reports/documents", async (req, res) => {
+    try {
+      const documents = await storage.getAllDocuments();
+      const brokerDocuments = documents.filter(d => d.uploadedBy === CURRENT_BROKER_ID);
+      
+      const pdfBuffer = await generateDocumentListPDF(brokerDocuments, CURRENT_BROKER_NAME);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="document-library-report.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Document report generation error:", error);
+      res.status(500).json({ error: "Document report generation failed" });
+    }
+  });
+
+  // User settings routes
+  app.get("/api/user/settings", async (req, res) => {
+    try {
+      const settings = await storage.getUserSettings?.(CURRENT_BROKER_ID);
+      res.json(settings || {
+        aiPersonality: 'professional',
+        autoSaveChats: true,
+        notificationsEnabled: true,
+        dataRetentionDays: 90,
+        privacyLevel: 'standard'
+      });
+    } catch (error) {
+      console.error("Settings fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  app.post("/api/user/settings", async (req, res) => {
+    try {
+      const settings = await storage.createOrUpdateUserSettings?.(CURRENT_BROKER_ID, req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Settings update error:", error);
+      res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
+  // Chat sessions with improved storage
+  app.get("/api/chat/sessions", async (req, res) => {
+    try {
+      const messages = await storage.getAllChatMessages();
+      const brokerMessages = messages.filter(m => m.brokerId === CURRENT_BROKER_ID);
+      
+      // Group by session
+      const sessions = brokerMessages.reduce((acc, msg) => {
+        if (!acc[msg.sessionId]) {
+          acc[msg.sessionId] = {
+            id: msg.sessionId,
+            sessionId: msg.sessionId,
+            startTime: new Date(msg.timestamp),
+            messageCount: 0,
+            lastActivity: new Date(msg.timestamp),
+            topics: [],
+            summary: ''
+          };
+        }
+        acc[msg.sessionId].messageCount++;
+        const msgDate = new Date(msg.timestamp);
+        if (msgDate > acc[msg.sessionId].lastActivity) {
+          acc[msg.sessionId].lastActivity = msgDate;
+        }
+        if (msgDate < acc[msg.sessionId].startTime) {
+          acc[msg.sessionId].startTime = msgDate;
+        }
+        return acc;
+      }, {} as any);
+
+      res.json(Object.values(sessions));
+    } catch (error) {
+      console.error("Sessions fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch sessions" });
+    }
+  });
+
   const httpServer = createServer(app);
   const wss = new WebSocketServer({ 
     server: httpServer,
@@ -35,12 +228,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Store broker message
           const brokerMessage = await storage.createChatMessage({
             sessionId: data.sessionId,
-            brokerName: data.brokerName || 'Unknown Broker',
+            brokerId: CURRENT_BROKER_ID,
+            brokerName: CURRENT_BROKER_NAME,
             sender: 'broker',
             message: data.message,
-            timestamp: new Date(),
             messageType: 'text',
-            metadata: {}
+            metadata: {},
+            attachments: data.attachments || []
           });
 
           // Get policy context if policy number mentioned

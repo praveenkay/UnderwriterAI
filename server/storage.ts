@@ -10,7 +10,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  upsertUser?(user: any): Promise<User>;
 
   // Policies
   getPolicy(id: number): Promise<Policy | undefined>;
@@ -63,13 +63,14 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<number, User> = new Map();
+  private users: Map<string, User> = new Map();
   private policies: Map<number, Policy> = new Map();
   private chatMessages: Map<number, ChatMessage> = new Map();
   private underwritingDecisions: Map<number, UnderwritingDecision> = new Map();
   private documents: Map<number, Document> = new Map();
   private underwritingRules: Map<number, UnderwritingRule> = new Map();
   private escalations: Map<number, Escalation> = new Map();
+  private userSettings: Map<string, any> = new Map();
   private currentId = 1;
 
   constructor() {
@@ -141,7 +142,7 @@ export class MemStorage implements IStorage {
   }
 
   // Users
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
 
@@ -401,8 +402,7 @@ import { initializeSQLiteDatabase } from "./init-sqlite";
 // Initialize database with sample data
 let isInitialized = false;
 
-import { DatabaseStorage } from './db-storage';
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();
 
 // Initialize and seed database on first use
 export async function initializeStorage() {
