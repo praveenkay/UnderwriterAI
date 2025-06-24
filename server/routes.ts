@@ -488,6 +488,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/documents/stats', async (req, res) => {
+    try {
+      const documents = await storage.getAllDocuments();
+      const stats = {
+        totalDocuments: documents.length,
+        completed: documents.filter(d => d.status === 'completed').length,
+        processing: documents.filter(d => d.status === 'processing').length,
+        failed: documents.filter(d => d.status === 'failed').length,
+        pending: documents.filter(d => d.status === 'pending').length,
+      };
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching document stats:', error);
+      res.status(500).json({ error: 'Failed to fetch document stats' });
+    }
+  });
+
   // Policies
   app.get('/api/policies', async (req, res) => {
     try {

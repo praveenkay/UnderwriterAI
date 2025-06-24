@@ -97,15 +97,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- **June 24, 2025**: Enhanced Large Document Processing with Aggressive Chunking Strategy
-  - Implemented aggressive chunking strategy for extremely large documents (1.3M+ tokens)
-  - Enhanced TokenManager with conservative token limits (3K-5K tokens per chunk maximum)
-  - Added Excel file processing support with XLSX package integration
-  - Created fallback document processing for data exports and spreadsheets
-  - Implemented batch processing with rate limiting to prevent API overload
-  - Added FileProcessor service for handling multiple file formats including Excel
-  - Fixed token estimation issues with character-based chunking for massive files
-  - System now processes documents of any size with proper error handling and continuation
+- **June 24, 2025**: Comprehensive Document Ingestion Interface with Enhanced Processing
+  - Renamed "Data Ingestion" to "Document Ingestion" and consolidated with existing documents functionality
+  - Created tabbed interface combining upload, processing status, and document library management
+  - Removed document upload section from dashboard to centralize all document operations
+  - Enhanced document library with download capabilities, rule viewing, and comprehensive file management
+  - Implemented real-time processing status monitoring with progress indicators and error reporting
+  - Added aggressive chunking strategy for extremely large documents (1.3M+ tokens) with enhanced TokenManager
+  - Integrated Excel file processing support and fallback processing for data exports and spreadsheets
+  - System now provides complete document lifecycle management from upload to analysis completion
 
 - **June 24, 2025**: Custom Vector Database Implementation with OpenRouter Support
   - Added OpenRouter as fourth AI provider option alongside Anthropic, OpenAI, and Gemini
