@@ -437,24 +437,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'File type is required' });
       }
 
-      const content = req.file.buffer.toString('utf-8');
-      let result;
+      console.log(`Starting document upload: ${req.file.originalname}, type: ${fileType}`);
 
-      // Use enhanced ingestion for specific file types
-      if (fileType === 'chat_log') {
-        result = await ingestChatLog(content, req.file.originalname);
-      } else if (fileType === 'guideline') {
-        result = await ingestGuidelineDocument(content, req.file.originalname);
-      } else {
-        // Fallback to original processor
-        const documentId = await uploadAndProcessDocument(
-          req.file.originalname,
-          fileType,
-          content
-        );
-        result = { documentId, message: 'Document uploaded and processing started' };
-      }
-
+      // Process the uploaded file properly
+      const result = await processUploadedFile(req.file, CURRENT_BROKER_ID, CURRENT_BROKER_NAME, fileType);
+      
+      console.log(`Document uploaded successfully with ID: ${result.documentId}`);
       res.json(result);
     } catch (error) {
       console.error('Document upload error:', error);

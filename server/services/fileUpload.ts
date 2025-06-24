@@ -88,7 +88,8 @@ export async function processUploadedFile(
       filePath: file.path,
       mimeType: file.mimetype,
       extractedRules: [],
-      extractedData: {}
+      extractedData: {},
+      uploadDate: new Date()
     });
 
     // Extract rules using AI
@@ -102,12 +103,22 @@ export async function processUploadedFile(
         action: rule.action,
         confidence: rule.confidence,
         source: `extracted_from_${fileType}`,
-        sourceDocumentId: document.id
+        sourceDocumentId: document.id,
+        createdAt: new Date()
       })
     );
     
     await Promise.all(rulePromises);
     
+    // Add to vector store for semantic search
+    await addToVectorStore(document.id, content, {
+      filename: file.originalname,
+      fileType,
+      uploadedBy: brokerId,
+      brokerName,
+      uploadDate: new Date()
+    });
+
     // Update document status
     await storage.updateDocumentStatus(document.id, 'completed', extractedRules);
     
@@ -145,7 +156,8 @@ export async function processUploadedFile(
         filePath: file.path,
         mimeType: file.mimetype,
         extractedRules: [],
-        extractedData: { error: error.message }
+        extractedData: { error: error.message },
+        uploadDate: new Date()
       });
     } catch (dbError) {
       console.error('Error creating failed document record:', dbError);
