@@ -1,158 +1,154 @@
 import {
-  pgTable,
+  sqliteTable,
   text,
-  varchar,
-  timestamp,
-  jsonb,
-  index,
-  serial,
   integer,
   real,
-  boolean,
-} from "drizzle-orm/pg-core";
+  index,
+} from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table for authentication
-export const sessions = pgTable(
+// Session storage table
+export const sessions = sqliteTable(
   "sessions",
   {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
+    sid: text("sid").primaryKey(),
+    sess: text("sess").notNull(), // JSON as text
+    expire: integer("expire").notNull(), // timestamp as integer
   },
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  username: varchar("username").unique(),
-  password: varchar("password"),
-  role: varchar("role").notNull().default("broker"), // broker, underwriter, admin
-  name: varchar("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+// User storage table
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey().notNull(),
+  email: text("email").unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  profileImageUrl: text("profile_image_url"),
+  username: text("username").unique(),
+  password: text("password"),
+  role: text("role").notNull().default("broker"), // broker, underwriter, admin
+  name: text("name").notNull(),
+  createdAt: integer("created_at"), // timestamp as integer
+  updatedAt: integer("updated_at"), // timestamp as integer
 });
 
-export const policies = pgTable("policies", {
-  id: serial("id").primaryKey(),
-  policyNumber: varchar("policy_number").notNull().unique(),
-  clientName: varchar("client_name").notNull(),
-  policyType: varchar("policy_type").notNull(), // SME, restaurant, tech, etc.
+export const policies = sqliteTable("policies", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  policyNumber: text("policy_number").notNull().unique(),
+  clientName: text("client_name").notNull(),
+  policyType: text("policy_type").notNull(), // SME, restaurant, tech, etc.
   premium: real("premium").notNull(),
   coverageAmount: real("coverage_amount").notNull(),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  isActive: boolean("is_active").notNull().default(true),
-  claimsHistory: jsonb("claims_history").notNull().default("[]"),
-  riskProfile: varchar("risk_profile").notNull().default("medium"), // low, medium, high
-  renewalDate: timestamp("renewal_date"),
-  createdAt: timestamp("created_at").defaultNow(),
+  startDate: integer("start_date").notNull(), // date as timestamp
+  endDate: integer("end_date").notNull(), // date as timestamp
+  isActive: integer("is_active", { mode: 'boolean' }).notNull().default(true),
+  claimsHistory: text("claims_history").notNull().default("[]"), // JSON as text
+  riskProfile: text("risk_profile").notNull().default("medium"), // low, medium, high
+  renewalDate: integer("renewal_date"), // date as timestamp
+  createdAt: integer("created_at"), // timestamp as integer
 });
 
-export const chatMessages = pgTable("chat_messages", {
-  id: serial("id").primaryKey(),
-  sessionId: varchar("session_id").notNull(),
-  brokerId: varchar("broker_id").references(() => users.id),
-  brokerName: varchar("broker_name").notNull(),
-  sender: varchar("sender").notNull(), // broker, ai, underwriter
+export const chatMessages = sqliteTable("chat_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  sessionId: text("session_id").notNull(),
+  brokerId: text("broker_id"),
+  brokerName: text("broker_name").notNull(),
+  sender: text("sender").notNull(), // broker, ai, underwriter
   message: text("message").notNull(),
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
-  messageType: varchar("message_type").notNull().default("text"), // text, decision, escalation
-  metadata: jsonb("metadata").default("{}"),
-  policyNumber: varchar("policy_number"), // Related policy if applicable
-  isArchived: boolean("is_archived").notNull().default(false),
-  attachments: jsonb("attachments").default("[]"), // File attachments
+  timestamp: integer("timestamp").notNull(), // timestamp as integer
+  messageType: text("message_type").notNull().default("text"), // text, decision, escalation
+  metadata: text("metadata").default("{}"), // JSON as text
+  policyNumber: text("policy_number"), // Related policy if applicable
+  isArchived: integer("is_archived", { mode: 'boolean' }).notNull().default(false),
+  attachments: text("attachments").default("[]"), // JSON as text
 });
 
-export const underwritingDecisions = pgTable("underwriting_decisions", {
-  id: serial("id").primaryKey(),
-  policyId: integer("policy_id").references(() => policies.id),
-  brokerId: varchar("broker_id").references(() => users.id),
-  brokerName: varchar("broker_name").notNull(),
-  sessionId: varchar("session_id"), // Link to chat session
-  requestType: varchar("request_type").notNull(), // discount, amendment, coverage_change
-  requestDetails: jsonb("request_details").notNull(),
-  decision: varchar("decision").notNull(), // approved, declined, escalated
+export const underwritingDecisions = sqliteTable("underwriting_decisions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  policyId: integer("policy_id"),
+  brokerId: text("broker_id"),
+  brokerName: text("broker_name").notNull(),
+  sessionId: text("session_id"), // Link to chat session
+  requestType: text("request_type").notNull(), // discount, amendment, coverage_change
+  requestDetails: text("request_details").notNull(), // JSON as text
+  decision: text("decision").notNull(), // approved, declined, escalated
   decisionReason: text("decision_reason").notNull(),
   confidence: real("confidence").notNull(), // 0-1
-  processedBy: varchar("processed_by").notNull(), // ai, human_underwriter
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  processedBy: text("processed_by").notNull(), // ai, human_underwriter
+  timestamp: integer("timestamp").notNull(), // timestamp as integer
   responseTime: integer("response_time_ms").notNull(),
-  rulesApplied: jsonb("rules_applied").default("[]"),
+  rulesApplied: text("rules_applied").default("[]"), // JSON as text
 });
 
-export const documents = pgTable("documents", {
-  id: serial("id").primaryKey(),
-  filename: varchar("filename").notNull(),
-  originalFilename: varchar("original_filename").notNull(),
-  fileType: varchar("file_type").notNull(), // chat_log, guideline, policy, quote
-  uploadedBy: varchar("uploaded_by").references(() => users.id),
-  brokerName: varchar("broker_name").notNull(),
-  uploadDate: timestamp("upload_date").notNull().defaultNow(),
-  processedDate: timestamp("processed_date"),
-  status: varchar("status").notNull().default("pending"), // pending, processing, completed, failed
-  extractedRules: jsonb("extracted_rules").notNull().default("[]"),
+export const documents = sqliteTable("documents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  filename: text("filename").notNull(),
+  originalFilename: text("original_filename").notNull(),
+  fileType: text("file_type").notNull(), // chat_log, guideline, policy, quote
+  uploadedBy: text("uploaded_by"),
+  brokerName: text("broker_name").notNull(),
+  uploadDate: integer("upload_date").notNull(), // timestamp as integer
+  processedDate: integer("processed_date"), // timestamp as integer
+  status: text("status").notNull().default("pending"), // pending, processing, completed, failed
+  extractedRules: text("extracted_rules").notNull().default("[]"), // JSON as text
   content: text("content"),
   fileSize: integer("file_size"),
-  contentHash: varchar("content_hash"), // For deduplication
-  isActive: boolean("is_active").notNull().default(true),
-  filePath: varchar("file_path"), // Server file path
-  mimeType: varchar("mime_type"),
-  extractedData: jsonb("extracted_data").default("{}"), // Additional extracted information
+  contentHash: text("content_hash"), // For deduplication
+  isActive: integer("is_active", { mode: 'boolean' }).notNull().default(true),
+  filePath: text("file_path"), // Server file path
+  mimeType: text("mime_type"),
+  extractedData: text("extracted_data").default("{}"), // JSON as text
 });
 
-export const underwritingRules = pgTable("underwriting_rules", {
-  id: serial("id").primaryKey(),
-  ruleType: varchar("rule_type").notNull(), // discount, coverage, risk_assessment
-  conditions: jsonb("conditions").notNull(),
-  action: jsonb("action").notNull(),
+export const underwritingRules = sqliteTable("underwriting_rules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ruleType: text("rule_type").notNull(), // discount, coverage, risk_assessment
+  conditions: text("conditions").notNull(), // JSON as text
+  action: text("action").notNull(), // JSON as text
   confidence: real("confidence").notNull(),
-  source: varchar("source").notNull(), // extracted_from_chat, guideline_document, manual
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  sourceDocumentId: integer("source_document_id").references(() => documents.id),
+  source: text("source").notNull(), // extracted_from_chat, guideline_document, manual
+  isActive: integer("is_active", { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer("created_at").notNull(), // timestamp as integer
+  sourceDocumentId: integer("source_document_id"),
 });
 
-export const escalations = pgTable("escalations", {
-  id: serial("id").primaryKey(),
-  chatMessageId: integer("chat_message_id").references(() => chatMessages.id),
-  brokerId: varchar("broker_id").references(() => users.id),
-  brokerName: varchar("broker_name").notNull(),
+export const escalations = sqliteTable("escalations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  chatMessageId: integer("chat_message_id"),
+  brokerId: text("broker_id"),
+  brokerName: text("broker_name").notNull(),
   reason: text("reason").notNull(),
-  priority: varchar("priority").notNull().default("medium"), // low, medium, high
-  assignedTo: varchar("assigned_to"), // underwriter name
-  assignedToId: varchar("assigned_to_id").references(() => users.id),
-  status: varchar("status").notNull().default("pending"), // pending, in_progress, resolved
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  resolvedAt: timestamp("resolved_at"),
+  priority: text("priority").notNull().default("medium"), // low, medium, high
+  assignedTo: text("assigned_to"), // underwriter name
+  assignedToId: text("assigned_to_id"),
+  status: text("status").notNull().default("pending"), // pending, in_progress, resolved
+  createdAt: integer("created_at").notNull(), // timestamp as integer
+  resolvedAt: integer("resolved_at"), // timestamp as integer
   resolutionNotes: text("resolution_notes"),
 });
 
 // Analytics tracking
-export const analyticsEvents = pgTable("analytics_events", {
-  id: serial("id").primaryKey(),
-  eventType: varchar("event_type").notNull(), // chat_message, decision_made, document_uploaded, etc.
-  brokerId: varchar("broker_id").references(() => users.id),
-  brokerName: varchar("broker_name").notNull(),
-  sessionId: varchar("session_id"),
-  entityType: varchar("entity_type"), // policy, document, chat, etc.
+export const analyticsEvents = sqliteTable("analytics_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  eventType: text("event_type").notNull(), // chat_message, decision_made, document_uploaded, etc.
+  brokerId: text("broker_id").notNull(),
+  brokerName: text("broker_name").notNull(),
+  sessionId: text("session_id"),
+  entityType: text("entity_type"), // policy, document, chat, etc.
   entityId: integer("entity_id"), // ID of the related entity
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
-  metadata: jsonb("metadata").default("{}"),
+  timestamp: integer("timestamp").notNull(), // timestamp as integer
+  metadata: text("metadata").default("{}"), // JSON as text
   duration: integer("duration_ms"), // For performance tracking
 });
 
 // Broker performance metrics
-export const brokerMetrics = pgTable("broker_metrics", {
-  id: serial("id").primaryKey(),
-  brokerId: varchar("broker_id").references(() => users.id),
-  brokerName: varchar("broker_name").notNull(),
-  metricDate: timestamp("metric_date").notNull(),
+export const brokerMetrics = sqliteTable("broker_metrics", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  brokerId: text("broker_id").notNull(),
+  brokerName: text("broker_name").notNull(),
+  metricDate: integer("metric_date").notNull(), // date as timestamp
   totalChats: integer("total_chats").notNull().default(0),
   totalDecisions: integer("total_decisions").notNull().default(0),
   avgResponseTime: real("avg_response_time").notNull().default(0),
@@ -164,16 +160,16 @@ export const brokerMetrics = pgTable("broker_metrics", {
 });
 
 // User settings for AI chat configuration
-export const userSettings = pgTable("user_settings", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id).notNull(),
-  aiPersonality: varchar("ai_personality").notNull().default("professional"), // professional, friendly, concise
-  autoSaveChats: boolean("auto_save_chats").notNull().default(true),
-  notificationsEnabled: boolean("notifications_enabled").notNull().default(true),
+export const userSettings = sqliteTable("user_settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().unique(),
+  aiPersonality: text("ai_personality").notNull().default("professional"), // professional, friendly, concise
+  autoSaveChats: integer("auto_save_chats", { mode: 'boolean' }).notNull().default(true),
+  notificationsEnabled: integer("notifications_enabled", { mode: 'boolean' }).notNull().default(true),
   dataRetentionDays: integer("data_retention_days").notNull().default(90),
-  privacyLevel: varchar("privacy_level").notNull().default("standard"), // minimal, standard, full
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  privacyLevel: text("privacy_level").notNull().default("standard"), // minimal, standard, full
+  createdAt: integer("created_at").notNull(), // timestamp as integer
+  updatedAt: integer("updated_at").notNull(), // timestamp as integer
 });
 
 // Insert schemas
