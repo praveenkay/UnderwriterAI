@@ -41,23 +41,28 @@ app.use((req, res, next) => {
 
 (async () => {
   // Initialize SQLite database
+  let useDatabase = false;
   try {
     console.log("Initializing SQLite database...");
     initializeSQLiteDatabase();
     
-    // Initialize database storage
+    // Initialize database storage directly
     const dbStorage = new DatabaseStorage();
     
     // Test database connection
-    await dbStorage.getAllPolicies();
-    console.log("Database storage initialized successfully");
+    const policies = await dbStorage.getAllPolicies();
+    console.log(`SQLite database connected successfully with ${policies.length} policies`);
     
-    // Replace the default storage with database storage
+    // Replace storage completely with database storage
+    Object.keys(storage).forEach(key => delete (storage as any)[key]);
     Object.setPrototypeOf(storage, DatabaseStorage.prototype);
     Object.assign(storage, dbStorage);
+    
+    useDatabase = true;
+    console.log("Now using SQLite database storage");
   } catch (dbError) {
-    console.error("Database initialization failed:", dbError);
-    console.log("Using in-memory storage as fallback");
+    console.error("SQLite initialization failed:", dbError);
+    console.log("Falling back to in-memory storage");
   }
 
   const server = await registerRoutes(app);

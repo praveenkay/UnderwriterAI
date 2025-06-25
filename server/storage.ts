@@ -74,7 +74,10 @@ export class MemStorage implements IStorage {
   private currentId = 1;
 
   constructor() {
-    this.seedData();
+    // Only seed data if not using database storage
+    if (!(this as any).usingDatabase) {
+      this.seedData();
+    }
   }
 
   private seedData() {
