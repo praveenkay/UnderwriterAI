@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
+import { DatabaseStorage } from "./db-storage";
+import { initializeSQLiteDatabase } from "./init-sqlite";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +40,26 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize SQLite database
+  try {
+    console.log("Initializing SQLite database...");
+    initializeSQLiteDatabase();
+    
+    // Initialize database storage
+    const dbStorage = new DatabaseStorage();
+    
+    // Test database connection
+    await dbStorage.getAllPolicies();
+    console.log("Database storage initialized successfully");
+    
+    // Replace the default storage with database storage
+    Object.setPrototypeOf(storage, DatabaseStorage.prototype);
+    Object.assign(storage, dbStorage);
+  } catch (dbError) {
+    console.error("Database initialization failed:", dbError);
+    console.log("Using in-memory storage as fallback");
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

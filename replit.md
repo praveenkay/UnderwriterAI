@@ -23,11 +23,12 @@ AgentVerse is an AI-powered underwriting assistant designed for Zurich Insurance
 - **AI Integration**: OpenAI API for intelligent decision making
 
 ### Database Design
-- **Database**: SQLite with better-sqlite3 driver for local persistence
+- **Database**: SQLite with better-sqlite3 driver for local persistence (converted from PostgreSQL)
 - **ORM**: Drizzle ORM with SQLite dialect
 - **Schema Location**: `shared/schema.ts` for comprehensive type sharing
-- **Migration Strategy**: Manual table creation with automated seeding
+- **Migration Strategy**: Manual table creation with automated seeding via init-sqlite.ts
 - **Data Structure**: Broker-centric design with proper naming conventions and relationships
+- **Storage**: DatabaseStorage class with SQLite-compatible data handling for timestamps and JSON fields
 
 ## Key Components
 
@@ -96,6 +97,16 @@ Preferred communication style: Simple, everyday language.
 ## Changelog
 
 ## Recent Changes
+
+- **June 25, 2025**: Complete Database Migration from PostgreSQL to SQLite
+  - Successfully converted all database schemas from PostgreSQL to SQLite syntax
+  - Updated database driver from @neondatabase/serverless to better-sqlite3
+  - Created manual table initialization script (init-sqlite.ts) to work around locked drizzle config
+  - Modified DatabaseStorage class to handle SQLite data types (timestamps as integers, JSON as text)
+  - Implemented proper data transformation for Date objects and JSON serialization
+  - Local SQLite database (data.db) now fully functional with sample data
+  - All features working: chat system, document ingestion, analytics, and underwriting rules
+  - Database is now portable and doesn't require external database services
 
 - **June 24, 2025**: Comprehensive Document Ingestion Interface with Enhanced Processing
   - Renamed "Data Ingestion" to "Document Ingestion" and consolidated with existing documents functionality

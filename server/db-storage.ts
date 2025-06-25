@@ -72,11 +72,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPolicy(insertPolicy: any): Promise<Policy> {
-    const [policy] = await db
+    // Convert Date objects to timestamps for SQLite
+    const policyData = {
+      ...insertPolicy,
+      startDate: insertPolicy.startDate instanceof Date ? insertPolicy.startDate.getTime() : insertPolicy.startDate,
+      endDate: insertPolicy.endDate instanceof Date ? insertPolicy.endDate.getTime() : insertPolicy.endDate,
+      renewalDate: insertPolicy.renewalDate instanceof Date ? insertPolicy.renewalDate.getTime() : insertPolicy.renewalDate,
+      createdAt: insertPolicy.createdAt instanceof Date ? insertPolicy.createdAt.getTime() : Date.now(),
+      claimsHistory: typeof insertPolicy.claimsHistory === 'object' ? JSON.stringify(insertPolicy.claimsHistory) : insertPolicy.claimsHistory || '[]'
+    };
+
+    const result = await db
       .insert(policies)
-      .values(insertPolicy)
+      .values(policyData)
       .returning();
-    return policy;
+    return result[0];
   }
 
   async getAllPolicies(): Promise<Policy[]> {
@@ -98,11 +108,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createChatMessage(insertMessage: any): Promise<ChatMessage> {
-    const [message] = await db
+    // Convert Date objects to timestamps for SQLite
+    const messageData = {
+      ...insertMessage,
+      timestamp: insertMessage.timestamp instanceof Date ? insertMessage.timestamp.getTime() : insertMessage.timestamp || Date.now(),
+      metadata: typeof insertMessage.metadata === 'object' ? JSON.stringify(insertMessage.metadata) : insertMessage.metadata || '{}',
+      attachments: typeof insertMessage.attachments === 'object' ? JSON.stringify(insertMessage.attachments) : insertMessage.attachments || '[]'
+    };
+
+    const result = await db
       .insert(chatMessages)
-      .values(insertMessage)
+      .values(messageData)
       .returning();
-    return message;
+    return result[0];
   }
 
   async getAllChatMessages(): Promise<ChatMessage[]> {
@@ -116,11 +134,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUnderwritingDecision(insertDecision: any): Promise<UnderwritingDecision> {
-    const [decision] = await db
+    // Convert Date objects to timestamps for SQLite
+    const decisionData = {
+      ...insertDecision,
+      timestamp: insertDecision.timestamp instanceof Date ? insertDecision.timestamp.getTime() : insertDecision.timestamp || Date.now(),
+      requestDetails: typeof insertDecision.requestDetails === 'object' ? JSON.stringify(insertDecision.requestDetails) : insertDecision.requestDetails,
+      rulesApplied: typeof insertDecision.rulesApplied === 'object' ? JSON.stringify(insertDecision.rulesApplied) : insertDecision.rulesApplied || '[]'
+    };
+
+    const result = await db
       .insert(underwritingDecisions)
-      .values(insertDecision)
+      .values(decisionData)
       .returning();
-    return decision;
+    return result[0];
   }
 
   async getDecisionsByPolicy(policyId: number): Promise<UnderwritingDecision[]> {
@@ -146,11 +172,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDocument(insertDocument: any): Promise<Document> {
-    const [document] = await db
+    // Convert Date objects to timestamps for SQLite
+    const documentData = {
+      ...insertDocument,
+      uploadDate: insertDocument.uploadDate instanceof Date ? insertDocument.uploadDate.getTime() : insertDocument.uploadDate || Date.now(),
+      processedDate: insertDocument.processedDate instanceof Date ? insertDocument.processedDate.getTime() : insertDocument.processedDate,
+      extractedRules: typeof insertDocument.extractedRules === 'object' ? JSON.stringify(insertDocument.extractedRules) : insertDocument.extractedRules || '[]',
+      extractedData: typeof insertDocument.extractedData === 'object' ? JSON.stringify(insertDocument.extractedData) : insertDocument.extractedData || '{}'
+    };
+
+    const result = await db
       .insert(documents)
-      .values(insertDocument)
+      .values(documentData)
       .returning();
-    return document;
+    return result[0];
   }
 
   async getAllDocuments(): Promise<Document[]> {
@@ -175,11 +210,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUnderwritingRule(insertRule: any): Promise<UnderwritingRule> {
-    const [rule] = await db
+    // Convert Date objects to timestamps for SQLite
+    const ruleData = {
+      ...insertRule,
+      createdAt: insertRule.createdAt instanceof Date ? insertRule.createdAt.getTime() : insertRule.createdAt || Date.now(),
+      conditions: typeof insertRule.conditions === 'object' ? JSON.stringify(insertRule.conditions) : insertRule.conditions,
+      action: typeof insertRule.action === 'object' ? JSON.stringify(insertRule.action) : insertRule.action
+    };
+
+    const result = await db
       .insert(underwritingRules)
-      .values(insertRule)
+      .values(ruleData)
       .returning();
-    return rule;
+    return result[0];
   }
 
   async getActiveRules(): Promise<UnderwritingRule[]> {
@@ -204,11 +247,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEscalation(insertEscalation: any): Promise<Escalation> {
-    const [escalation] = await db
+    // Convert Date objects to timestamps for SQLite
+    const escalationData = {
+      ...insertEscalation,
+      createdAt: insertEscalation.createdAt instanceof Date ? insertEscalation.createdAt.getTime() : insertEscalation.createdAt || Date.now(),
+      resolvedAt: insertEscalation.resolvedAt instanceof Date ? insertEscalation.resolvedAt.getTime() : insertEscalation.resolvedAt
+    };
+
+    const result = await db
       .insert(escalations)
-      .values(insertEscalation)
+      .values(escalationData)
       .returning();
-    return escalation;
+    return result[0];
   }
 
   async getPendingEscalations(): Promise<Escalation[]> {
@@ -232,11 +282,18 @@ export class DatabaseStorage implements IStorage {
 
   // Analytics events
   async createAnalyticsEvent(insertEvent: any): Promise<AnalyticsEvent> {
-    const [event] = await db
+    // Convert Date objects to timestamps for SQLite
+    const eventData = {
+      ...insertEvent,
+      timestamp: insertEvent.timestamp instanceof Date ? insertEvent.timestamp.getTime() : insertEvent.timestamp || Date.now(),
+      metadata: typeof insertEvent.metadata === 'object' ? JSON.stringify(insertEvent.metadata) : insertEvent.metadata || '{}'
+    };
+
+    const result = await db
       .insert(analyticsEvents)
-      .values(insertEvent)
+      .values(eventData)
       .returning();
-    return event;
+    return result[0];
   }
 
   async getAnalyticsEventsByBroker(brokerId: string, limit = 100): Promise<AnalyticsEvent[]> {
