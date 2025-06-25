@@ -64,6 +64,11 @@ app.use((req, res, next) => {
     console.error("SQLite initialization failed:", dbError);
     console.log("Falling back to in-memory storage");
   }
+  
+  // Skip additional seeding if using database
+  if (!useDatabase) {
+    console.log("Initializing in-memory storage");
+  }
 
   const server = await registerRoutes(app);
 
