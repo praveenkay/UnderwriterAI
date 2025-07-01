@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -14,36 +14,48 @@ export class FileProcessor {
     try {
       console.log(`Processing Excel file: ${filePath}`);
       
-      const workbook = XLSX.readFile(filePath);
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
       let allText = '';
       
       // Process each worksheet
-      for (const sheetName of workbook.SheetNames) {
-        console.log(`Processing sheet: ${sheetName}`);
-        
-        const worksheet = workbook.Sheets[sheetName];
-        
-        // Convert to JSON to extract all cell values
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-          header: 1, 
-          defval: '',
-          raw: false // Get formatted values
-        });
+      for (const worksheet of workbook.worksheets) {
+        console.log(`Processing sheet: ${worksheet.name}`);
         
         // Extract text from all cells
-        for (const row of jsonData) {
-          if (Array.isArray(row)) {
-            const rowText = row
-              .filter(cell => cell && typeof cell === 'string' && cell.trim().length > 0)
-              .join(' | ');
-            
-            if (rowText.trim()) {
-              allText += rowText + '\n';
+        worksheet.eachRow((row, rowNumber) => {
+          const rowValues: string[] = [];
+          
+          row.eachCell((cell, colNumber) => {
+            if (cell.value !== null && cell.value !== undefined) {
+              let cellText = '';
+              
+              // Handle different cell value types
+              if (typeof cell.value === 'string') {
+                cellText = cell.value;
+              } else if (typeof cell.value === 'number') {
+                cellText = cell.value.toString();
+              } else if (cell.value instanceof Date) {
+                cellText = cell.value.toISOString();
+              } else if (typeof cell.value === 'object' && 'text' in cell.value && cell.value.text) {
+                // Rich text
+                cellText = cell.value.text;
+              } else {
+                cellText = String(cell.value);
+              }
+              
+              if (cellText.trim().length > 0) {
+                rowValues.push(cellText.trim());
+              }
             }
+          });
+          
+          if (rowValues.length > 0) {
+            allText += rowValues.join(' | ') + '\n';
           }
-        }
+        });
         
-        allText += `\n--- End of Sheet: ${sheetName} ---\n\n`;
+        allText += `\n--- End of Sheet: ${worksheet.name} ---\n\n`;
       }
       
       console.log(`Extracted ${allText.length} characters from Excel file`);
@@ -51,7 +63,8 @@ export class FileProcessor {
       
     } catch (error) {
       console.error('Error processing Excel file:', error);
-      throw new Error(`Failed to process Excel file: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to process Excel file: ${errorMessage}`);
     }
   }
   
