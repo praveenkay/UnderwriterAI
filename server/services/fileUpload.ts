@@ -75,10 +75,15 @@ export async function processUploadedFile(
     // Generate content hash for deduplication
     const contentHash = crypto.createHash('md5').update(content).digest('hex');
     
-    // Create document record with all required fields
+    // Generate new filename: originalname_YYYYMMDD_HHMMSS.ext
     const ext = path.extname(file.originalname);
+    const baseName = path.basename(file.originalname, ext);
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const datetime = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const newFilename = `${baseName}_${datetime}${ext}`;
     const document = await storage.createDocument({
-      filename: file.filename || `upload_${Date.now()}${ext}`,
+      filename: newFilename,
       originalFilename: file.originalname,
       fileType,
       uploadedBy: brokerId,
@@ -89,9 +94,8 @@ export async function processUploadedFile(
       contentHash,
       filePath: file.path || null,
       mimeType: file.mimetype,
-      extractedRules: [],
-      extractedData: {},
-      uploadDate: new Date()
+      extractedRules: JSON.stringify([]),
+      extractedData: JSON.stringify({})
     });
 
     // Extract rules using AI
@@ -101,12 +105,11 @@ export async function processUploadedFile(
     const rulePromises = extractedRules.map(rule => 
       storage.createUnderwritingRule({
         ruleType: rule.ruleType,
-        conditions: rule.conditions,
-        action: rule.action,
+        conditions: JSON.stringify(rule.conditions),
+        action: JSON.stringify(rule.action),
         confidence: rule.confidence,
         source: `extracted_from_${fileType}`,
-        sourceDocumentId: document.id,
-        createdAt: new Date()
+        sourceDocumentId: document.id
       })
     );
     
@@ -157,9 +160,8 @@ export async function processUploadedFile(
         contentHash: '',
         filePath: file.path || null,
         mimeType: file.mimetype,
-        extractedRules: [],
-        extractedData: { error: error.message },
-        uploadDate: new Date()
+        extractedRules: JSON.stringify([]),
+        extractedData: JSON.stringify({ error: (error as Error).message })
       });
     } catch (dbError) {
       console.error('Error creating failed document record:', dbError);
@@ -171,7 +173,7 @@ export async function processUploadedFile(
       processingTime: Date.now() - startTime,
       confidence: 0,
       status: 'failed',
-      insights: [`Processing failed: ${error.message}`]
+      insights: [`Processing failed: ${(error as Error).message}`]
     };
   }
 }
@@ -208,7 +210,7 @@ async function readFileContent(file: Express.Multer.File): Promise<string> {
     }
   } catch (error) {
     console.error('Error reading file:', error);
-    throw new Error(`Failed to read file content: ${error.message}`);
+    throw new Error(`Failed to read file content: ${(error as Error).message}`);
   }
 }
 
@@ -219,7 +221,7 @@ function generateInsights(fileType: string, extractedRules: any[], content: stri
     insights.push(`Successfully extracted ${extractedRules.length} underwriting rules`);
     
     const ruleTypes = extractedRules.map(r => r.ruleType);
-    const uniqueTypes = [...new Set(ruleTypes)];
+    const uniqueTypes = Array.from(new Set(ruleTypes));
     insights.push(`Rule types found: ${uniqueTypes.join(', ')}`);
     
     const highConfidenceRules = extractedRules.filter(r => r.confidence > 0.8);

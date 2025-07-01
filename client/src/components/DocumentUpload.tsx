@@ -11,7 +11,9 @@ import type { Document } from "../types";
 
 export default function DocumentUpload() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [fileType, setFileType] = useState<string>("");
+  const [isBulkUpload, setIsBulkUpload] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -42,6 +44,7 @@ export default function DocumentUpload() {
         description: "Document uploaded and processing started",
       });
       setSelectedFile(null);
+      setSelectedFiles(null);
       setFileType("");
       queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
     },
@@ -54,24 +57,80 @@ export default function DocumentUpload() {
     },
   });
 
+  const bulkUploadMutation = useMutation({
+    mutationFn: async ({ files, type }: { files: FileList; type: string }) => {
+      const results = [];
+      for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append('file', files[i]);
+        formData.append('fileType', type);
+
+        const response = await fetch('/api/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed for ${files[i].name}`);
+        }
+        results.push(await response.json());
+      }
+      return results;
+    },
+    onSuccess: (results) => {
+      toast({
+        title: "Bulk upload successful",
+        description: `${results.length} documents uploaded and processing started`,
+      });
+      setSelectedFile(null);
+      setSelectedFiles(null);
+      setFileType("");
+      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Bulk upload failed",
+        description: "Some or all documents failed to upload. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    const files = event.target.files;
+    if (files) {
+      if (isBulkUpload) {
+        setSelectedFiles(files);
+        setSelectedFile(null);
+      } else {
+        setSelectedFile(files[0]);
+        setSelectedFiles(null);
+      }
     }
   };
 
   const handleUpload = () => {
-    if (!selectedFile || !fileType) {
-      toast({
-        title: "Missing information",
-        description: "Please select a file and file type",
-        variant: "destructive",
-      });
-      return;
+    if (isBulkUpload) {
+      if (!selectedFiles || selectedFiles.length === 0 || !fileType) {
+        toast({
+          title: "Missing information",
+          description: "Please select files and file type",
+          variant: "destructive",
+        });
+        return;
+      }
+      bulkUploadMutation.mutate({ files: selectedFiles, type: fileType });
+    } else {
+      if (!selectedFile || !fileType) {
+        toast({
+          title: "Missing information",
+          description: "Please select a file and file type",
+          variant: "destructive",
+        });
+        return;
+      }
+      uploadMutation.mutate({ file: selectedFile, type: fileType });
     }
-
-    uploadMutation.mutate({ file: selectedFile, type: fileType });
   };
 
   const getStatusIcon = (status: string) => {
@@ -124,33 +183,74 @@ export default function DocumentUpload() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center space-x-4 mb-4">
+          <label className="flex items-center space-x-2">
+            <input
+              type="radio"
+              checked={!isBulkUpload}
+              onChange={() => {
+                setIsBulkUpload(false);
+                setSelectedFiles(null);
+              }}
+              className="text-primary focus:ring-primary"
+            />
+            <span className="text-sm">Single Upload</span>
+          </label>
+          <label className="flex items-center space-x-2">
+            <input
+              type="radio"
+              checked={isBulkUpload}
+              onChange={() => {
+                setIsBulkUpload(true);
+                setSelectedFile(null);
+              }}
+              className="text-primary focus:ring-primary"
+            />
+            <span className="text-sm">Bulk Upload</span>
+          </label>
+        </div>
+
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
           <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm font-medium text-gray-600 mb-1">Upload Documents</p>
+          <p className="text-sm font-medium text-gray-600 mb-1">
+            {isBulkUpload ? 'Upload Multiple Documents' : 'Upload Documents'}
+          </p>
           <p className="text-xs text-gray-500 mb-3">Chat logs, guidelines, policies</p>
           
           <input
             type="file"
             onChange={handleFileSelect}
             accept=".txt,.pdf,.doc,.docx,.csv,.xlsx"
+            multiple={isBulkUpload}
             className="hidden"
             id="file-upload"
           />
           <label htmlFor="file-upload">
             <Button variant="outline" size="sm" className="cursor-pointer" asChild>
-              <span>Choose File</span>
+              <span>{isBulkUpload ? 'Choose Files' : 'Choose File'}</span>
             </Button>
           </label>
           
-          {selectedFile && (
+          {selectedFile && !isBulkUpload && (
             <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
               <p className="font-medium">{selectedFile.name}</p>
               <p className="text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
             </div>
           )}
+
+          {selectedFiles && isBulkUpload && (
+            <div className="mt-3 p-2 bg-gray-50 rounded text-sm">
+              <p className="font-medium">{selectedFiles.length} files selected</p>
+              <p className="text-gray-500">
+                Total size: {Array.from(selectedFiles).reduce((total, file) => total + file.size, 0) / 1024 / 1024 > 1024 
+                  ? `${(Array.from(selectedFiles).reduce((total, file) => total + file.size, 0) / 1024 / 1024 / 1024).toFixed(2)} GB`
+                  : `${(Array.from(selectedFiles).reduce((total, file) => total + file.size, 0) / 1024 / 1024).toFixed(2)} MB`}
+              </p>
+            </div>
+          )}
         </div>
 
-        {selectedFile && (
+        {(selectedFile || selectedFiles) && (
           <div className="space-y-3">
             <Select onValueChange={setFileType}>
               <SelectTrigger>
@@ -165,10 +265,12 @@ export default function DocumentUpload() {
 
             <Button 
               onClick={handleUpload} 
-              disabled={!fileType || uploadMutation.isPending}
+              disabled={!fileType || (uploadMutation.isPending || bulkUploadMutation.isPending)}
               className="w-full"
             >
-              {uploadMutation.isPending ? 'Uploading...' : 'Upload & Process'}
+              {(uploadMutation.isPending || bulkUploadMutation.isPending) 
+                ? (isBulkUpload ? 'Uploading Files...' : 'Uploading...') 
+                : (isBulkUpload ? 'Upload & Process Files' : 'Upload & Process')}
             </Button>
           </div>
         )}

@@ -35,6 +35,7 @@ export interface IStorage {
   createDocument(document: InsertDocument): Promise<Document>;
   getAllDocuments(): Promise<Document[]>;
   updateDocumentStatus(id: number, status: string, extractedRules?: any[]): Promise<void>;
+  deleteDocument(id: number): Promise<void>;
 
   // Underwriting Rules
   getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined>;
@@ -294,6 +295,10 @@ export class MemStorage implements IStorage {
     }
   }
 
+  async deleteDocument(id: number): Promise<void> {
+    this.documents.delete(id);
+  }
+
   // Underwriting Rules
   async getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined> {
     return this.underwritingRules.get(id);
@@ -415,9 +420,8 @@ export async function initializeStorage() {
       const { DatabaseStorage } = await import("./db-storage");
       const dbStorage = new DatabaseStorage();
       
-      // Test connection and seed if needed
+      // Test connection - DON'T seed automatically since it's handled in index.ts
       await dbStorage.getAllDocuments();
-      await seedDatabase();
       
       // Replace in-memory storage with database storage
       Object.setPrototypeOf(storage, DatabaseStorage.prototype);

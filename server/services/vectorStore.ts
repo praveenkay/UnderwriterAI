@@ -198,6 +198,25 @@ export class VectorStoreService {
     }
   }
 
+  /**
+   * Add a document to the vector store (for semantic search)
+   */
+  async addDocument({ id, content, metadata }: { id: string, content: string, metadata: any }): Promise<void> {
+    await this.initialize();
+    // Split content into chunks (for now, just one chunk)
+    const chunkId = `${id}_chunk_0`;
+    const embedding = await this.getEmbedding(content);
+    const docChunk: DocumentChunk = {
+      id: chunkId,
+      content,
+      metadata: { ...metadata, id },
+      embedding: embedding || undefined
+    };
+    this.documents.set(chunkId, docChunk);
+    await this.saveStore();
+    console.log(`Document ${id} added to vector store.`);
+  }
+
   async searchSimilar(
     query: string, 
     limit: number = 5,

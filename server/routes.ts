@@ -7,7 +7,7 @@ import { generateChatResponse } from "./services/openai";
 import { uploadAndProcessDocument } from "./services/documentProcessor";
 import { ingestChatLog, ingestGuidelineDocument, getIngestionMetrics } from "./services/documentIngestion";
 import { insertChatMessageSchema, insertDocumentSchema } from "@shared/schema";
-import { upload, processUploadedFile } from "./services/fileUpload";
+import { upload as fileUpload, processUploadedFile } from "./services/fileUpload";
 import { generateChatHistoryPDF, generateBrokerReportPDF, generateDocumentListPDF } from "./services/pdfGenerator";
 import { aiService } from "./services/aiProvider";
 import { vectorStoreService } from "./services/vectorStore";
@@ -426,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced document upload and processing for hackathon
-  app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
+  app.post('/api/documents/upload', fileUpload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -450,15 +450,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Document delete route
+  app.delete('/api/documents/:id', async (req, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const document = await storage.getDocument(documentId);
+      
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Delete the physical file if it exists
+      if (document.filePath && require('fs').existsSync(document.filePath)) {
+        require('fs').unlinkSync(document.filePath);
+      }
+
+      // Delete the document record from database
+      await storage.deleteDocument(documentId);
+      
+      res.json({ message: "Document deleted successfully" });
+    } catch (error) {
+      console.error("Delete error:", error);
+      res.status(500).json({ error: "Delete failed" });
+    }
+  });
+
+  // Enhanced documents route with better data
   app.get('/api/documents', async (req, res) => {
     try {
       const documents = await storage.getAllDocuments();
-      res.json(documents);
+      // Ensure extractedRules is parsed correctly
+      const enhancedDocs = documents.map(doc => ({
+        ...doc,
+        extractedRules: typeof doc.extractedRules === 'string' 
+          ? JSON.parse(doc.extractedRules || '[]') 
+          : doc.extractedRules || []
+      }));
+      res.json(enhancedDocs);
     } catch (error) {
+      console.error("Documents fetch error:", error);
       res.status(500).json({ error: 'Failed to fetch documents' });
     }
   });
 
+  // Document stats route
   app.get('/api/documents/stats', async (req, res) => {
     try {
       const documents = await storage.getAllDocuments();
@@ -468,28 +503,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processing: documents.filter(d => d.status === 'processing').length,
         failed: documents.filter(d => d.status === 'failed').length,
         pending: documents.filter(d => d.status === 'pending').length,
+        totalRulesExtracted: documents.reduce((total, doc) => {
+          const rules = typeof doc.extractedRules === 'string' 
+            ? JSON.parse(doc.extractedRules || '[]') 
+            : doc.extractedRules || [];
+          return total + rules.length;
+        }, 0)
       };
       res.json(stats);
     } catch (error) {
-      console.error('Error fetching document stats:', error);
+      console.error("Document stats fetch error:", error);
       res.status(500).json({ error: 'Failed to fetch document stats' });
     }
   });
 
-  app.get('/api/documents/stats', async (req, res) => {
+  // Enhanced rules route with document source info
+  app.get('/api/rules', async (req, res) => {
     try {
-      const documents = await storage.getAllDocuments();
-      const stats = {
-        totalDocuments: documents.length,
-        completed: documents.filter(d => d.status === 'completed').length,
-        processing: documents.filter(d => d.status === 'processing').length,
-        failed: documents.filter(d => d.status === 'failed').length,
-        pending: documents.filter(d => d.status === 'pending').length,
-      };
-      res.json(stats);
+      const rules = await storage.getActiveRules();
+      const enhancedRules = rules.map(rule => ({
+        ...rule,
+        conditions: typeof rule.conditions === 'string' 
+          ? JSON.parse(rule.conditions || '{}') 
+          : rule.conditions || {},
+        action: typeof rule.action === 'string' 
+          ? JSON.parse(rule.action || '{}') 
+          : rule.action || {}
+      }));
+      res.json(enhancedRules);
     } catch (error) {
-      console.error('Error fetching document stats:', error);
-      res.status(500).json({ error: 'Failed to fetch document stats' });
+      console.error("Rules fetch error:", error);
+      res.status(500).json({ error: 'Failed to fetch rules' });
+    }
+  });
+
+  // Document rules route - get rules for specific document
+  app.get('/api/documents/:id/rules', async (req, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const rules = await storage.getActiveRules();
+      const documentRules = rules.filter(rule => rule.sourceDocumentId === documentId);
+      
+      const enhancedRules = documentRules.map(rule => ({
+        ...rule,
+        conditions: typeof rule.conditions === 'string' 
+          ? JSON.parse(rule.conditions || '{}') 
+          : rule.conditions || {},
+        action: typeof rule.action === 'string' 
+          ? JSON.parse(rule.action || '{}') 
+          : rule.action || {}
+      }));
+      
+      res.json(enhancedRules);
+    } catch (error) {
+      console.error("Document rules fetch error:", error);
+      res.status(500).json({ error: 'Failed to fetch document rules' });
     }
   });
 
@@ -523,16 +591,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(decisions);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch decisions' });
-    }
-  });
-
-  // Rules engine
-  app.get('/api/rules', async (req, res) => {
-    try {
-      const rules = await storage.getActiveRules();
-      res.json(rules);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch rules' });
     }
   });
 
