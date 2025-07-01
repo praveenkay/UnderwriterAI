@@ -40,8 +40,12 @@ export interface IStorage {
   // Underwriting Rules
   getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined>;
   createUnderwritingRule(rule: InsertUnderwritingRule): Promise<UnderwritingRule>;
+  updateUnderwritingRule(id: number, updates: Partial<UnderwritingRule>): Promise<UnderwritingRule>;
+  deleteUnderwritingRule(id: number): Promise<void>;
   getActiveRules(): Promise<UnderwritingRule[]>;
+  getAllRules(): Promise<UnderwritingRule[]>;
   getRulesByType(ruleType: string): Promise<UnderwritingRule[]>;
+  getRulesByDocument(documentId: number): Promise<UnderwritingRule[]>;
 
   // Escalations
   getEscalation(id: number): Promise<Escalation | undefined>;
@@ -322,6 +326,30 @@ export class MemStorage implements IStorage {
 
   async getRulesByType(ruleType: string): Promise<UnderwritingRule[]> {
     return Array.from(this.underwritingRules.values()).filter(rule => rule.ruleType === ruleType);
+  }
+
+  async updateUnderwritingRule(id: number, updates: Partial<UnderwritingRule>): Promise<UnderwritingRule> {
+    const rule = this.underwritingRules.get(id);
+    if (!rule) {
+      throw new Error(`Rule with id ${id} not found`);
+    }
+    
+    const updatedRule = { ...rule, ...updates };
+    this.underwritingRules.set(id, updatedRule);
+    return updatedRule;
+  }
+
+  async deleteUnderwritingRule(id: number): Promise<void> {
+    this.underwritingRules.delete(id);
+  }
+
+  async getAllRules(): Promise<UnderwritingRule[]> {
+    return Array.from(this.underwritingRules.values());
+  }
+
+  async getRulesByDocument(documentId: number): Promise<UnderwritingRule[]> {
+    return Array.from(this.underwritingRules.values())
+      .filter(rule => rule.sourceDocumentId === documentId);
   }
 
   // Escalations

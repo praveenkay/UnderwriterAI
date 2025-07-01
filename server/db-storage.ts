@@ -203,6 +203,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(documents.id, id));
   }
 
+  async deleteDocument(id: number): Promise<void> {
+    await db.delete(documents).where(eq(documents.id, id));
+  }
+
   // Underwriting rules
   async getUnderwritingRule(id: number): Promise<UnderwritingRule | undefined> {
     const [rule] = await db.select().from(underwritingRules).where(eq(underwritingRules.id, id));
@@ -238,6 +242,46 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(underwritingRules)
       .where(and(eq(underwritingRules.ruleType, ruleType), eq(underwritingRules.isActive, true)));
+  }
+
+  async updateUnderwritingRule(id: number, updates: Partial<UnderwritingRule>): Promise<UnderwritingRule> {
+    const updateData: any = { ...updates };
+    
+    // Convert Date objects to timestamps and objects to JSON strings
+    if (updateData.createdAt instanceof Date) {
+      updateData.createdAt = updateData.createdAt.getTime();
+    }
+    if (updateData.conditions && typeof updateData.conditions === 'object') {
+      updateData.conditions = JSON.stringify(updateData.conditions);
+    }
+    if (updateData.action && typeof updateData.action === 'object') {
+      updateData.action = JSON.stringify(updateData.action);
+    }
+
+    const [rule] = await db
+      .update(underwritingRules)
+      .set(updateData)
+      .where(eq(underwritingRules.id, id))
+      .returning();
+    return rule;
+  }
+
+  async deleteUnderwritingRule(id: number): Promise<void> {
+    await db.delete(underwritingRules).where(eq(underwritingRules.id, id));
+  }
+
+  async getAllRules(): Promise<UnderwritingRule[]> {
+    return await db
+      .select()
+      .from(underwritingRules)
+      .orderBy(desc(underwritingRules.createdAt));
+  }
+
+  async getRulesByDocument(documentId: number): Promise<UnderwritingRule[]> {
+    return await db
+      .select()
+      .from(underwritingRules)
+      .where(eq(underwritingRules.sourceDocumentId, documentId));
   }
 
   // Escalations

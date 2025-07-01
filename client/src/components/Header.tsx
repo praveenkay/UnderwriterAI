@@ -52,6 +52,13 @@ export default function Header() {
               }`}>
                 DOCUMENTS
               </Link>
+              <Link href="/rules" className={`text-sm tracking-wide pb-2 transition-colors ${
+                isActive("/rules") 
+                  ? "text-primary font-medium border-b-2 border-primary" 
+                  : "text-gray-500 hover:text-gray-900"
+              }`}>
+                RULES
+              </Link>
               <Link href="/analytics" className={`text-sm tracking-wide pb-2 transition-colors ${
                 isActive("/analytics") 
                   ? "text-primary font-medium border-b-2 border-primary" 
