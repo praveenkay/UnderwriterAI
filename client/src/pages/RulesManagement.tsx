@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Header from "../components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,11 +68,12 @@ const RulesManagement: React.FC = () => {
   const ruleTypes = ['discount', 'coverage', 'risk_assessment', 'escalation'];
   const sources = ['manual', 'extracted_from_chat', 'guideline_document'];
 
-  useEffect(() => {
-    fetchRules();
-  }, [pagination.currentPage, filters]);
+  const showAlert = (type: 'success' | 'error', message: string) => {
+    setAlert({ type, message });
+    setTimeout(() => setAlert(null), 5000);
+  };
 
-  const fetchRules = async () => {
+  const fetchRules = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -99,12 +101,11 @@ const RulesManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.currentPage, filters.ruleType, filters.isActive, filters.search]);
 
-  const showAlert = (type: 'success' | 'error', message: string) => {
-    setAlert({ type, message });
-    setTimeout(() => setAlert(null), 5000);
-  };
+  useEffect(() => {
+    fetchRules();
+  }, [fetchRules]);
 
   const handleCreateRule = async () => {
     try {
@@ -250,7 +251,9 @@ const RulesManagement: React.FC = () => {
   const formatJson = (obj: any) => JSON.stringify(obj, null, 2);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <Header />
+      <div className="p-6 space-y-6">
       {alert && (
         <Alert className={alert.type === 'error' ? 'border-red-500' : 'border-green-500'}>
           <AlertDescription>{alert.message}</AlertDescription>
@@ -697,6 +700,7 @@ const RulesManagement: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };
