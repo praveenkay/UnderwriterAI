@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { aiService } from './aiProvider';
+import { mockAiService } from './mockAiProvider';
 import { storage } from '../storage';
 import { FileProcessor } from './fileProcessor';
 
@@ -67,13 +68,19 @@ export async function processUploadedFile(
   fileType: string
 ): Promise<FileProcessingResult> {
   const startTime = Date.now();
+  let document: any = null;
+  let contentHash = '';
   
   try {
+    console.log(`Starting file processing: ${file.originalname}, type: ${fileType}, size: ${file.size} bytes`);
+    
     // Read file content
     const content = await readFileContent(file);
+    console.log(`File content read successfully, length: ${content.length} characters`);
     
     // Generate content hash for deduplication
-    const contentHash = crypto.createHash('md5').update(content).digest('hex');
+    contentHash = crypto.createHash('md5').update(content).digest('hex');
+    console.log(`Content hash generated: ${contentHash}`);
     
     // Generate new filename: originalname_YYYYMMDD_HHMMSS.ext
     const ext = path.extname(file.originalname);
@@ -82,12 +89,13 @@ export async function processUploadedFile(
     const pad = (n: number) => n.toString().padStart(2, '0');
     const datetime = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const newFilename = `${baseName}_${datetime}${ext}`;
-    const document = await storage.createDocument({
+    
+    document = await storage.createDocument({
       filename: newFilename,
       originalFilename: file.originalname,
       fileType,
-      uploadedBy: brokerId,
-      brokerName,
+      uploadedBy: brokerId || 'system',
+      brokerName: brokerName || 'System Upload',
       status: 'processing',
       content,
       fileSize: file.size,
@@ -98,22 +106,32 @@ export async function processUploadedFile(
       extractedData: JSON.stringify({})
     });
 
-    // Extract rules using AI
-    const extractedRules = await aiService.extractDocumentRules(content, fileType);
+    // Extract rules using AI (with fallback to mock service)
+    let extractedRules;
+    try {
+      extractedRules = await aiService.extractDocumentRules(content, fileType);
+      console.log(`AI extracted ${extractedRules.length} rules from document`);
+    } catch (aiError) {
+      console.warn('AI service failed, using mock service:', aiError);
+      extractedRules = await mockAiService.extractDocumentRules(content, fileType);
+      console.log(`Mock AI extracted ${extractedRules.length} rules from document`);
+    }
     
     // Store extracted rules in database
-    const rulePromises = extractedRules.map(rule => 
-      storage.createUnderwritingRule({
-        ruleType: rule.ruleType,
-        conditions: JSON.stringify(rule.conditions),
-        action: JSON.stringify(rule.action),
-        confidence: rule.confidence,
+    const rulePromises = extractedRules.map(rule => {
+      console.log('Creating rule:', rule);
+      return storage.createUnderwritingRule({
+        ruleType: rule.ruleType || 'general',
+        conditions: JSON.stringify(rule.conditions || {}),
+        action: JSON.stringify(rule.action || {}),
+        confidence: rule.confidence || 0.5,
         source: `extracted_from_${fileType}`,
         sourceDocumentId: document.id
-      })
-    );
+      });
+    });
     
-    await Promise.all(rulePromises);
+    const createdRules = await Promise.all(rulePromises);
+    console.log(`Successfully created ${createdRules.length} rules in database`);
     
     // Add to vector store for semantic search
     await addToVectorStore(document.id, content, {
@@ -148,16 +166,17 @@ export async function processUploadedFile(
     
     // Update document status to failed if document was created
     try {
-      const document = await storage.createDocument({
+      const failedContentHash = contentHash || crypto.createHash('md5').update('').digest('hex');
+      const failedDocument = await storage.createDocument({
         filename: file.filename || `failed_upload_${Date.now()}.txt`,
         originalFilename: file.originalname,
         fileType,
-        uploadedBy: brokerId,
-        brokerName,
+        uploadedBy: brokerId || 'system',
+        brokerName: brokerName || 'System Upload',
         status: 'failed',
         content: '',
         fileSize: file.size,
-        contentHash: '',
+        contentHash: failedContentHash,
         filePath: file.path || null,
         mimeType: file.mimetype,
         extractedRules: JSON.stringify([]),

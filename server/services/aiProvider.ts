@@ -143,14 +143,44 @@ class OpenAIProvider implements AIProvider {
       // Import tokenManager dynamically to avoid circular imports
       const { tokenManager } = await import('./tokenManager');
       
-      const systemPrompt = `You are an expert underwriting rules extraction system. Extract structured underwriting rules from the provided ${fileType} document. Return a JSON array of rules with the following structure:
-      {
-        "ruleType": "discount|coverage|risk_assessment|amendment",
-        "conditions": { "field": "value", "operator": "equals|greater_than|less_than|contains" },
-        "action": { "type": "approve|decline|escalate|discount", "value": number, "reason": "string" },
-        "confidence": 0.0-1.0,
-        "description": "human readable rule description"
-      }`;
+      const systemPrompt = `You are an expert underwriting rules extraction system. Extract ALL possible underwriting rules, guidelines, criteria, and decision factors from the provided ${fileType} document. 
+
+IMPORTANT: Extract EVERY rule, guideline, condition, limit, requirement, or decision criteria mentioned in the document. Be comprehensive and thorough.
+
+Return a JSON object with this structure:
+{
+  "rules": [
+    {
+      "ruleType": "discount|coverage|risk_assessment|amendment|eligibility|limit|requirement|exclusion",
+      "conditions": {
+        "field": "property_age|driver_age|claims_history|coverage_amount|business_type|etc",
+        "operator": "equals|greater_than|less_than|contains|between",
+        "value": "specific value or range",
+        "description": "detailed condition description"
+      },
+      "action": {
+        "type": "approve|decline|escalate|discount|require_inspection|manual_review|apply_surcharge",
+        "value": "percentage, amount, or action details",
+        "reason": "why this action is taken"
+      },
+      "confidence": 0.0-1.0,
+      "description": "comprehensive human readable rule description",
+      "category": "property|auto|liability|general|commercial|personal",
+      "priority": "high|medium|low"
+    }
+  ],
+  "extracted_info": {
+    "coverage_limits": [],
+    "deductibles": [],
+    "exclusions": [],
+    "requirements": [],
+    "procedures": [],
+    "contact_info": [],
+    "key_terms": []
+  }
+}
+
+Extract rules from ALL sections including: coverage limits, deductibles, eligibility criteria, risk factors, exclusions, requirements, procedures, contact information, and any decision-making guidelines.`;
       
       const contentTokens = tokenManager.estimateTokens(content);
       const systemTokens = tokenManager.estimateTokens(systemPrompt);
@@ -244,7 +274,7 @@ Context: ${JSON.stringify(context)}`;
       return response.choices[0].message.content || '';
     } catch (error) {
       console.error('OpenAI chat response error:', error);
-      return `Error generating chat response: ${error.message}`;
+      return `Error generating chat response: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
 }
@@ -361,7 +391,7 @@ class OpenRouterProvider implements AIProvider {
       return data.choices[0]?.message?.content || 'No response generated';
     } catch (error) {
       console.error('OpenRouter API error:', error);
-      throw new Error(`Failed to generate response: ${error.message}`);
+      throw new Error(`Failed to generate response: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -486,7 +516,7 @@ export class AIService {
         this.providers.set('anthropic', new AnthropicProvider());
       }
     } catch (error) {
-      console.warn('Anthropic provider not available:', error.message);
+      console.warn('Anthropic provider not available:', error instanceof Error ? error.message : String(error));
     }
 
     try {
@@ -494,7 +524,7 @@ export class AIService {
         this.providers.set('openai', new OpenAIProvider());
       }
     } catch (error) {
-      console.warn('OpenAI provider not available:', error.message);
+      console.warn('OpenAI provider not available:', error instanceof Error ? error.message : String(error));
     }
 
     try {
@@ -502,7 +532,7 @@ export class AIService {
         this.providers.set('gemini', new GeminiProvider());
       }
     } catch (error) {
-      console.warn('Gemini provider not available:', error.message);
+      console.warn('Gemini provider not available:', error instanceof Error ? error.message : String(error));
     }
 
     try {
@@ -510,7 +540,7 @@ export class AIService {
         this.providers.set('openrouter', new OpenRouterProvider());
       }
     } catch (error) {
-      console.warn('OpenRouter provider not available:', error.message);
+      console.warn('OpenRouter provider not available:', error instanceof Error ? error.message : String(error));
     }
 
     // Set default provider (prefer OpenAI, then Anthropic, then OpenRouter, then Gemini)

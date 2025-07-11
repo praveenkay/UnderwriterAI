@@ -53,7 +53,7 @@ export class DatabaseStorage implements IStorage {
         target: users.id,
         set: {
           ...userData,
-          updatedAt: new Date(),
+          updatedAt: Date.now(),
         },
       })
       .returning();
@@ -172,12 +172,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDocument(insertDocument: any): Promise<Document> {
-    // Convert Date objects to timestamps for SQLite
+    // Convert Date objects to timestamps for SQLite and ensure all fields are properly typed
     const documentData = {
-      ...insertDocument,
+      filename: insertDocument.filename || '',
+      originalFilename: insertDocument.originalFilename || '',
+      fileType: insertDocument.fileType || 'document',
+      uploadedBy: insertDocument.uploadedBy || null,
+      brokerName: insertDocument.brokerName || '',
       uploadDate: insertDocument.uploadDate instanceof Date ? insertDocument.uploadDate.getTime() : insertDocument.uploadDate || Date.now(),
-      processedDate: insertDocument.processedDate instanceof Date ? insertDocument.processedDate.getTime() : insertDocument.processedDate,
+      processedDate: insertDocument.processedDate instanceof Date ? insertDocument.processedDate.getTime() : insertDocument.processedDate || null,
+      status: insertDocument.status || 'pending',
       extractedRules: typeof insertDocument.extractedRules === 'object' ? JSON.stringify(insertDocument.extractedRules) : insertDocument.extractedRules || '[]',
+      content: insertDocument.content || null,
+      fileSize: insertDocument.fileSize || null,
+      contentHash: insertDocument.contentHash || null,
+      isActive: insertDocument.isActive !== undefined ? insertDocument.isActive : true,
+      filePath: insertDocument.filePath || null,
+      mimeType: insertDocument.mimeType || null,
       extractedData: typeof insertDocument.extractedData === 'object' ? JSON.stringify(insertDocument.extractedData) : insertDocument.extractedData || '{}'
     };
 
@@ -197,8 +208,8 @@ export class DatabaseStorage implements IStorage {
       .update(documents)
       .set({
         status,
-        processedDate: new Date(),
-        extractedRules: extractedRules || []
+        processedDate: Date.now(),
+        extractedRules: JSON.stringify(extractedRules || [])
       })
       .where(eq(documents.id, id));
   }
@@ -316,7 +327,7 @@ export class DatabaseStorage implements IStorage {
   async updateEscalationStatus(id: number, status: string, assignedTo?: string): Promise<void> {
     const updateData: any = { status };
     if (assignedTo) updateData.assignedTo = assignedTo;
-    if (status === 'resolved') updateData.resolvedAt = new Date();
+    if (status === 'resolved') updateData.resolvedAt = Date.now();
 
     await db
       .update(escalations)
@@ -364,8 +375,8 @@ export class DatabaseStorage implements IStorage {
 
   async getBrokerMetrics(brokerId: string, date?: Date): Promise<BrokerMetrics | undefined> {
     const targetDate = date || new Date();
-    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
+    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
     const [metrics] = await db
       .select()
@@ -382,8 +393,8 @@ export class DatabaseStorage implements IStorage {
 
   async getAllBrokerMetrics(date?: Date): Promise<BrokerMetrics[]> {
     if (date) {
-      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+      const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
 
       return await db
         .select()
@@ -411,7 +422,7 @@ export class DatabaseStorage implements IStorage {
       .values({ ...settings, userId })
       .onConflictDoUpdate({
         target: userSettings.userId,
-        set: { ...settings, updatedAt: new Date() }
+        set: { ...settings, updatedAt: Date.now() }
       })
       .returning();
     return result;

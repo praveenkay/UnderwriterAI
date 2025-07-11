@@ -14,7 +14,16 @@ export default function ChatInterface() {
   const [sessionId] = useState(() => `session_${Date.now()}`);
   const [inputMessage, setInputMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // User metadata - in a real app, this would come from authentication
+  const [userMetadata] = useState({
+    name: "John Smith",
+    agency: "Smith Insurance Brokers Ltd",
+    brokerId: "broker_001"
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -59,8 +68,52 @@ export default function ChatInterface() {
     }
   });
 
-  const handleSendMessage = () => {
+  const handleFileAttachment = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('sessionId', sessionId);
+      formData.append('brokerId', userMetadata.brokerId);
+      formData.append('brokerName', userMetadata.name);
+      formData.append('agency', userMetadata.agency);
+
+      const response = await fetch('/api/chat/attachments/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setAttachedFiles(prev => [...prev, file]);
+        
+        // Add attachment message
+        const attachmentMessage: ChatMessage = {
+          id: Date.now(),
+          sessionId,
+          sender: 'broker',
+          message: `📎 Attached: ${file.name}`,
+          timestamp: new Date(),
+          messageType: 'attachment',
+          attachments: [result.attachment]
+        };
+        setMessages(prev => [...prev, attachmentMessage]);
+      }
+    } catch (error) {
+      console.error('File upload error:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
     if (!inputMessage.trim() || !isConnected) return;
+
+    const attachments = attachedFiles.map(file => ({
+      filename: file.name,
+      size: file.size,
+      type: file.type
+    }));
 
     const userMessage: ChatMessage = {
       id: Date.now(),
@@ -68,7 +121,8 @@ export default function ChatInterface() {
       sender: 'broker',
       message: inputMessage,
       timestamp: new Date(),
-      messageType: 'text'
+      messageType: 'text',
+      attachments: attachments.length > 0 ? attachments : undefined
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -76,10 +130,15 @@ export default function ChatInterface() {
     sendMessage({
       type: 'chat_message',
       sessionId,
-      message: inputMessage
+      message: inputMessage,
+      brokerName: userMetadata.name,
+      brokerId: userMetadata.brokerId,
+      agency: userMetadata.agency,
+      attachments
     });
 
     setInputMessage("");
+    setAttachedFiles([]);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -248,19 +307,18 @@ export default function ChatInterface() {
                 size="sm"
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary"
                 onClick={() => {
-                  // Implement file attachment functionality
                   const input = document.createElement('input');
                   input.type = 'file';
-                  input.accept = '.pdf,.doc,.docx,.txt,.csv,.xlsx';
+                  input.accept = '.pdf,.doc,.docx,.txt,.csv,.xlsx,.png,.jpg,.jpeg';
                   input.onchange = (e) => {
                     const file = (e.target as HTMLInputElement).files?.[0];
                     if (file) {
-                      console.log('File selected:', file.name);
-                      // Handle file attachment
+                      handleFileAttachment(file);
                     }
                   };
                   input.click();
                 }}
+                disabled={isUploading}
               >
                 <Paperclip className="h-4 w-4" />
               </Button>

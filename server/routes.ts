@@ -293,8 +293,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             sender: 'broker',
             message: data.message,
             messageType: 'text',
-            metadata: {},
-            attachments: data.attachments || []
+            metadata: JSON.stringify({}),
+            attachments: JSON.stringify(data.attachments || [])
           });
 
           // Get policy context if policy number mentioned
@@ -340,7 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               policyId: policyData.id,
               brokerName: data.brokerName || 'Unknown Broker',
               requestType: request.requestType,
-              requestDetails: request.requestDetails,
+              requestDetails: JSON.stringify(request.requestDetails),
               decision: result.decision,
               decisionReason: result.reason,
               confidence: result.confidence,
@@ -388,9 +388,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             brokerName: data.brokerName || 'Unknown Broker',
             sender: 'ai',
             message: aiResponse,
-            timestamp: new Date(),
             messageType,
-            metadata
+            metadata: JSON.stringify(metadata)
           });
 
           // Send response back
@@ -423,6 +422,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(messages);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  // Chat attachment upload endpoint
+  app.post('/api/chat/attachments/upload', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const { sessionId, brokerId, brokerName, agency } = req.body;
+      
+      // Save file to uploads directory
+      const filename = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${req.file.originalname.split('.').pop()}`;
+      const filePath = `uploads/${filename}`;
+      
+      require('fs').writeFileSync(filePath, req.file.buffer);
+
+      const attachment = {
+        id: `att_${Date.now()}`,
+        filename: req.file.originalname,
+        size: req.file.size,
+        type: req.file.mimetype,
+        url: `/api/chat/attachments/download/${filename}`,
+        uploadedAt: new Date().toISOString()
+      };
+
+      res.json({ 
+        success: true, 
+        attachment,
+        message: `File ${req.file.originalname} uploaded successfully`
+      });
+    } catch (error) {
+      console.error('Chat attachment upload error:', error);
+      res.status(500).json({ error: 'Failed to upload attachment' });
+    }
+  });
+
+  // Chat attachment download endpoint
+  app.get('/api/chat/attachments/download/:filename', (req, res) => {
+    try {
+      const filePath = `uploads/${req.params.filename}`;
+      if (require('fs').existsSync(filePath)) {
+        res.download(filePath);
+      } else {
+        res.status(404).json({ error: 'File not found' });
+      }
+    } catch (error) {
+      console.error('Chat attachment download error:', error);
+      res.status(500).json({ error: 'Failed to download attachment' });
+    }
+  });
+
+  // Export chat session as PDF
+  app.get('/api/chat/sessions/:sessionId/export', async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const messages = await storage.getChatMessagesBySession(sessionId);
+      
+      if (messages.length === 0) {
+        return res.status(404).json({ error: 'Chat session not found' });
+      }
+
+      const pdfBuffer = await generateChatHistoryPDF(sessionId, CURRENT_BROKER_ID);
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="chat-session-${sessionId}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Chat export error:', error);
+      res.status(500).json({ error: 'Failed to export chat session' });
+    }
+  });
+
+  // Delete chat session
+  app.delete('/api/chat/sessions/:sessionId', async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const messages = await storage.getChatMessagesBySession(sessionId);
+      
+      if (messages.length === 0) {
+        return res.status(404).json({ error: 'Chat session not found' });
+      }
+
+      // Delete all messages in the session
+      for (const message of messages) {
+        await storage.deleteChatMessage?.(message.id);
+      }
+      
+      res.json({ 
+        message: 'Chat session deleted successfully',
+        deletedMessages: messages.length 
+      });
+    } catch (error) {
+      console.error('Chat session delete error:', error);
+      res.status(500).json({ error: 'Failed to delete chat session' });
     }
   });
 
@@ -783,8 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         confidence,
         source,
         sourceDocumentId,
-        isActive,
-        createdAt: Date.now()
+        isActive
       });
 
       const enhancedRule = {

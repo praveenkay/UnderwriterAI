@@ -1,0 +1,18 @@
+Sample Underwriting Guidelines
+
+1. Property Insurance Rules:
+   - Maximum coverage limit: $2,000,000
+   - Minimum deductible: $1,000
+   - Properties over 50 years old require inspection
+
+2. Auto Insurance Rules:
+   - Drivers under 25 require additional documentation
+   - Commercial vehicles need fleet discount evaluation
+   - Claims history over 3 incidents in 5 years requires manual review
+
+3. General Liability Rules:
+   - Manufacturing businesses require additional safety protocols
+   - Professional liability minimum $1M coverage
+   - High-risk industries need specialized underwriting
+
+This is a test document for verifying the document upload and processing functionality.

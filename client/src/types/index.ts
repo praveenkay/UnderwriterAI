@@ -1,16 +1,41 @@
+export interface ChatAttachment {
+  filename: string;
+  size: number;
+  type: string;
+  url?: string;
+  id?: string;
+}
+
 export interface ChatMessage {
   id: number;
   sessionId: string;
   sender: 'broker' | 'ai' | 'underwriter';
   message: string;
   timestamp: Date;
-  messageType: 'text' | 'decision' | 'escalation';
+  messageType: 'text' | 'decision' | 'escalation' | 'attachment';
   metadata?: {
     decision?: string;
     confidence?: number;
     factors?: string[];
     responseTime?: number;
   };
+  attachments?: ChatAttachment[];
+  brokerId?: string;
+  brokerName?: string;
+  agency?: string;
+}
+
+export interface ChatSession {
+  id: string;
+  sessionId: string;
+  startTime: Date;
+  messageCount: number;
+  lastActivity: Date;
+  topics: string[];
+  summary: string;
+  brokerName: string;
+  agency: string;
+  brokerId: string;
 }
 
 export interface Policy {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { History, Search, Calendar, Download, Trash2, MessageSquare } from "lucide-react";
+import { History, Search, Calendar, Download, Trash2, MessageSquare, FileText, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,61 +12,40 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import type { ChatMessage } from "../types";
-
-interface ChatSession {
-  id: string;
-  sessionId: string;
-  startTime: Date;
-  messageCount: number;
-  lastActivity: Date;
-  topics: string[];
-  summary: string;
-}
-
-const mockChatSessions: ChatSession[] = [
-  {
-    id: "1",
-    sessionId: "session_1750773617632",
-    startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    messageCount: 12,
-    lastActivity: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    topics: ["Policy Renewal", "Discount"],
-    summary: "Discussed 5% renewal discount for ABC Bakery policy"
-  },
-  {
-    id: "2",
-    sessionId: "session_1750773593826",
-    startTime: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    messageCount: 8,
-    lastActivity: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    topics: ["Coverage Amendment"],
-    summary: "Coverage increase request for City Restaurant"
-  },
-  {
-    id: "3",
-    sessionId: "session_1750773568963",
-    startTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    messageCount: 15,
-    lastActivity: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    topics: ["Risk Assessment", "Premium"],
-    summary: "Risk assessment for new manufacturing client"
-  }
-];
+import type { ChatMessage, ChatSession } from "../types";
 
 export default function ChatHistoryPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
 
-  const { data: chatMessages } = useQuery<ChatMessage[]>({
-    queryKey: [`/api/chat/sessions/${selectedSession?.sessionId}/messages`],
-    enabled: !!selectedSession
+  // Fetch chat sessions from API
+  const { data: chatSessions = [] } = useQuery<ChatSession[]>({
+    queryKey: ['/api/chat/sessions'],
+    select: (data) => data.map(session => ({
+      ...session,
+      startTime: new Date(session.startTime),
+      lastActivity: new Date(session.lastActivity),
+      topics: session.topics || ['General Chat'],
+      summary: session.summary || 'Chat conversation',
+      brokerName: session.brokerName || 'Unknown Broker',
+      agency: session.agency || 'Unknown Agency',
+      brokerId: session.brokerId || 'unknown'
+    }))
   });
 
-  const filteredSessions = mockChatSessions.filter(session =>
+  const { data: chatMessages } = useQuery<ChatMessage[]>({
+    queryKey: [`/api/chat/sessions/${selectedSession?.sessionId}/messages`],
+    enabled: !!selectedSession,
+    select: (data) => data.map(msg => ({
+      ...msg,
+      timestamp: new Date(msg.timestamp)
+    }))
+  });
+
+  const filteredSessions = chatSessions.filter((session: ChatSession) =>
     session.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    session.topics.some(topic => topic.toLowerCase().includes(searchTerm.toLowerCase()))
+    session.topics.some((topic: string) => topic.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const formatTime = (timestamp: Date) => {
@@ -80,14 +59,43 @@ export default function ChatHistoryPanel() {
     return `${days}d ago`;
   };
 
-  const exportSession = (session: ChatSession) => {
-    // Implement export functionality
-    console.log("Exporting session:", session.sessionId);
+  const exportSession = async (session: ChatSession) => {
+    try {
+      const response = await fetch(`/api/chat/sessions/${session.sessionId}/export`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chat-session-${session.sessionId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error('Failed to export session');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+    }
   };
 
-  const deleteSession = (session: ChatSession) => {
-    // Implement delete functionality
-    console.log("Deleting session:", session.sessionId);
+  const deleteSession = async (session: ChatSession) => {
+    if (confirm('Are you sure you want to delete this chat session? This action cannot be undone.')) {
+      try {
+        const response = await fetch(`/api/chat/sessions/${session.sessionId}`, {
+          method: 'DELETE'
+        });
+        if (response.ok) {
+          // Refresh the sessions list
+          window.location.reload();
+        } else {
+          console.error('Failed to delete session');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+      }
+    }
   };
 
   return (

@@ -1,0 +1,25 @@
+UNDERWRITING RULES AND GUIDELINES
+
+PROPERTY INSURANCE RULES:
+1. If property age > 50 years, then require inspection
+2. If coverage amount > $2,000,000, then escalate to senior underwriter
+3. If deductible < $1,000, then decline application
+4. If flood zone = high risk, then require flood insurance
+
+AUTO INSURANCE RULES:
+1. If driver age < 25, then apply 15% surcharge
+2. If claims count > 3 in last 5 years, then decline
+3. If vehicle type = commercial, then apply fleet discount 10%
+4. If driving record = clean for 5+ years, then apply safe driver discount 5%
+
+GENERAL LIABILITY RULES:
+1. If business type = manufacturing, then require safety audit
+2. If coverage limit < $1,000,000, then recommend increase
+3. If industry = high risk, then escalate to specialist
+4. If claims history = none for 3+ years, then apply renewal discount 5%
+
+ELIGIBILITY CRITERIA:
+1. Business must be operational for minimum 2 years
+2. Annual revenue must be between $100,000 and $50,000,000
+3. No bankruptcy filings in last 7 years
+4. Clean regulatory compliance record required
