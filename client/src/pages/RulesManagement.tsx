@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
+import React, { useState, useEffect, useCallback } from 'react';
+import Header from "../components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,11 +71,12 @@ const RulesManagement: React.FC = () => {
   const ruleTypes = ['discount', 'coverage', 'risk_assessment', 'escalation'];
   const sources = ['manual', 'extracted_from_chat', 'guideline_document'];
 
-  useEffect(() => {
-    fetchRules();
-  }, [pagination.currentPage, filters]);
+  const showAlert = (type: 'success' | 'error', message: string) => {
+    setAlert({ type, message });
+    setTimeout(() => setAlert(null), 5000);
+  };
 
-  const fetchRules = async () => {
+  const fetchRules = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -103,12 +104,11 @@ const RulesManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.currentPage, filters.ruleType, filters.isActive, filters.search]);
 
-  const showAlert = (type: 'success' | 'error', message: string) => {
-    setAlert({ type, message });
-    setTimeout(() => setAlert(null), 5000);
-  };
+  useEffect(() => {
+    fetchRules();
+  }, [fetchRules]);
 
   const handleCreateRule = async () => {
     try {
