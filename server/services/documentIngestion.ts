@@ -126,49 +126,32 @@ export async function ingestGuidelineDocument(content: string, filename: string)
   }
 }
 
-function parseChatConversations(content: string): string[] {
-  // Enhanced parsing for various chat formats
-  const conversationMarkers = [
-    /^Broker:/m,
-    /^Agent:/m,
-    /^Underwriter:/m,
-    /^\[.*?\]\s*[A-Za-z]+:/m,
-    /^\d{4}-\d{2}-\d{2}.*?:/m
-  ];
+/**
+ * Chat Session Ingestion for LLM Fine-tuning
+ * Processes chat sessions to create training data and improve AI responses
+ */
 
-  let conversations: string[] = [];
-  
-  // Try different parsing strategies
-  for (const marker of conversationMarkers) {
-    const matches = content.split(marker);
-    if (matches.length > 1) {
-      conversations = matches
-        .filter(conv => conv.trim().length > 100)
-        .map(conv => conv.trim())
-        .slice(0, 50); // Limit for performance
-      break;
-    }
-  }
-
-  // Fallback: split by double newlines
-  if (conversations.length === 0) {
-    conversations = content
-      .split(/\n\s*\n/)
-      .filter(conv => conv.trim().length > 100)
-      .slice(0, 30);
-  }
-
-  return conversations;
+export interface ChatIngestionResult {
+  sessionId: string;
+  trainingExamples: number;
+  qualityScore: number;
+  processingTime: number;
+  status: 'success' | 'partial' | 'failed';
+  insights: string[];
+  fineTuningData?: any[];
 }
 
+/**
+ * Extracts rules from guideline document content.
+ */
 async function extractGuidelineRules(content: string): Promise<any[]> {
   const rules: any[] = [];
 
   // Extract discount rules
   const discountPatterns = [
-    /(\d+)%?\s*discount.+?(?:for|when|if)\s+(.+?)(?:\.|$|;)/gi,
-    /discount\s+of\s+up\s+to\s+(\d+)%.+?(?:for|when|if)\s+(.+?)(?:\.|$|;)/gi,
-    /maximum\s+discount\s+(\d+)%.+?(?:for|when|if)\s+(.+?)(?:\.|$|;)/gi
+    /discount\s+of\s+up\s+to\s+(\d+)%/gi,
+    /maximum\s+discount\s+allowed\s+is\s+(\d+)%/gi,
+    /up\s+to\s+(\d+)%\s+discount/gi
   ];
 
   for (const pattern of discountPatterns) {
@@ -176,8 +159,8 @@ async function extractGuidelineRules(content: string): Promise<any[]> {
     while ((match = pattern.exec(content)) !== null) {
       rules.push({
         ruleType: "discount",
-        conditions: { description: match[2]?.trim() || "General conditions" },
-        action: { discountType: "percentage", percentage: parseInt(match[1]) },
+        conditions: { requestType: "discount" },
+        action: { percentage: parseInt(match[1]) },
         confidence: 85,
         source: "guideline_document",
         description: match[0].trim()
@@ -185,7 +168,7 @@ async function extractGuidelineRules(content: string): Promise<any[]> {
     }
   }
 
-  // Extract coverage limits
+  // Extract coverage rules
   const coveragePatterns = [
     /maximum\s+(?:coverage|limit)\s+(?:of\s+)?[\$£€]?([\d,]+)/gi,
     /coverage\s+limit\s+[\$£€]?([\d,]+)/gi,
@@ -285,16 +268,128 @@ function generateGuidelineInsights(extractedRules: any[]): string[] {
   return insights;
 }
 
-export async function getIngestionMetrics() {
-  const documents = await storage.getAllDocuments();
-  const completedDocs = documents.filter(d => d.status === "completed");
-  const totalRules = completedDocs.reduce((sum, doc) => sum + doc.extractedRules.length, 0);
-  
-  return {
-    totalDocuments: documents.length,
-    completedDocuments: completedDocs.length,
-    totalExtractedRules: totalRules,
-    averageRulesPerDocument: completedDocs.length > 0 ? Math.round(totalRules / completedDocs.length) : 0,
-    processingSuccessRate: documents.length > 0 ? Math.round((completedDocs.length / documents.length) * 100) : 0
-  };
+/**
+ * Chat Session Ingestion for LLM Fine-tuning
+ * Processes chat sessions to create training data and improve AI responses
+ */
+
+export interface ChatIngestionResult {
+  sessionId: string;
+  trainingExamples: number;
+  qualityScore: number;
+  processingTime: number;
+  status: 'success' | 'partial' | 'failed';
+  insights: string[];
+  fineTuningData?: any[];
 }
+
+export async function ingestChatSessionForFineTuning(sessionId: string): Promise<ChatIngestionResult> {
+  const startTime = Date.now();
+  
+  try {
+    console.log(`Starting chat ingestion for session: ${sessionId}`);
+    
+    // Get all messages from the session
+    const messages = await storage.getChatMessagesBySession(sessionId);
+    
+    if (messages.length < 2) {
+      return {
+        sessionId,
+        trainingExamples: 0,
+        qualityScore: 0,
+        processingTime: Date.now() - startTime,
+        status: 'failed',
+        insights: ['Insufficient messages for training data generation']
+      };
+    }
+
+    // Process messages into training examples
+    const trainingExamples = await generateTrainingExamples(messages);
+    
+    // Calculate quality score based on conversation characteristics
+    const qualityScore = calculateConversationQuality(messages, trainingExamples);
+    
+    // Store training data for fine-tuning
+    await storeFineTuningData(sessionId, trainingExamples);
+    
+    // Extract patterns and insights
+    const insights = generateChatInsights(messages, trainingExamples);
+    
+    // Update session metadata with ingestion info
+    await updateSessionIngestionMetadata(sessionId, {
+      ingestedAt: new Date().toISOString(),
+      trainingExamples: trainingExamples.length,
+      qualityScore,
+      status: 'ingested'
+    });
+
+    console.log(`Chat ingestion completed for session ${sessionId}: ${trainingExamples.length} training examples`);
+    
+    return {
+      sessionId,
+      trainingExamples: trainingExamples.length,
+      qualityScore,
+      processingTime: Date.now() - startTime,
+      status: 'success',
+      insights,
+      fineTuningData: trainingExamples
+    };
+  } catch (error) {
+    console.error(`Chat ingestion failed for session ${sessionId}:`, error);
+    return {
+      sessionId,
+      trainingExamples: 0,
+      qualityScore: 0,
+      processingTime: Date.now() - startTime,
+      status: 'failed',
+      insights: [`Processing failed: ${(error as Error).message}`]
+    };
+  }
+}
+
+async function generateTrainingExamples(messages: any[]): Promise<any[]> {
+  const trainingExamples: any[] = [];
+  
+  // Group messages into conversation pairs (user -> AI)
+  for (let i = 0; i < messages.length - 1; i++) {
+    const userMessage = messages[i];
+    const aiMessage = messages[i + 1];
+    
+    // Only process broker -> AI pairs
+    if (userMessage.sender === 'broker' && aiMessage.sender === 'ai') {
+      const example = {
+        id: `${userMessage.sessionId}_${userMessage.id}_${aiMessage.id}`,
+        input: {
+          message: userMessage.message,
+          context: {
+            sessionId: userMessage.sessionId,
+            brokerName: userMessage.brokerName,
+            timestamp: userMessage.timestamp,
+            messageType: userMessage.messageType || 'text',
+            attachments: userMessage.attachments ? JSON.parse(userMessage.attachments) : []
+          }
+        },
+        output: {
+          message: aiMessage.message,
+          messageType: aiMessage.messageType || 'text',
+          metadata: aiMessage.metadata ? JSON.parse(aiMessage.metadata) : {},
+          confidence: aiMessage.metadata ? JSON.parse(aiMessage.metadata).confidence : null,
+          decision: aiMessage.metadata ? JSON.parse(aiMessage.metadata).decision : null
+        },
+        quality_indicators: {
+          response_length: aiMessage.message.length,
+          contains_decision: aiMessage.messageType === 'decision',
+          has_confidence_score: !!(aiMessage.metadata && JSON.parse(aiMessage.metadata).confidence),
+          structured_response: aiMessage.message.includes('**') || aiMessage.message.includes('•'),
+          policy_reference: /policy|pol[\s#]*[A-Z0-9-]+/i.test(userMessage.message)
+        },
+        training_category: categorizeTrainingExample(userMessage.message, aiMessage.message)
+      };
+      
+      trainingExamples.push(example);
+    }
+  }
+  
+  return trainingExamples;
+}
+
