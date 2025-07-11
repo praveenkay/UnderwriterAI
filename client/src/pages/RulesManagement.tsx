@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Header from '../components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,8 +59,11 @@ const RulesManagement: React.FC = () => {
 
   const [newRule, setNewRule] = useState({
     ruleType: '',
-    conditions: '{}',
-    action: '{}',
+    conditionField: '',
+    conditionOperator: 'equals',
+    conditionValue: '',
+    actionType: 'discount',
+    actionValue: '',
     confidence: 0.5,
     source: 'manual'
   });
@@ -79,8 +83,8 @@ const RulesManagement: React.FC = () => {
         limit: '20'
       });
       
-      if (filters.ruleType) params.append('ruleType', filters.ruleType);
-      if (filters.isActive) params.append('isActive', filters.isActive);
+      if (filters.ruleType && filters.ruleType !== 'all') params.append('ruleType', filters.ruleType);
+      if (filters.isActive && filters.isActive !== 'all') params.append('isActive', filters.isActive);
 
       const response = await fetch(`/api/rules/all?${params}`);
       const data: RulesResponse = await response.json();
@@ -108,20 +112,34 @@ const RulesManagement: React.FC = () => {
 
   const handleCreateRule = async () => {
     try {
+      const conditions = { [newRule.conditionField]: { [newRule.conditionOperator]: newRule.conditionValue } };
+      const action = { [newRule.actionType]: newRule.actionValue };
+      
       const response = await fetch('/api/rules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newRule,
-          conditions: JSON.parse(newRule.conditions),
-          action: JSON.parse(newRule.action)
+          ruleType: newRule.ruleType,
+          conditions,
+          action,
+          confidence: newRule.confidence,
+          source: newRule.source
         })
       });
 
       if (response.ok) {
         showAlert('success', 'Rule created successfully');
         setShowCreateDialog(false);
-        setNewRule({ ruleType: '', conditions: '{}', action: '{}', confidence: 0.5, source: 'manual' });
+        setNewRule({ 
+          ruleType: '', 
+          conditionField: '',
+          conditionOperator: 'equals',
+          conditionValue: '',
+          actionType: 'discount',
+          actionValue: '',
+          confidence: 0.5, 
+          source: 'manual' 
+        });
         fetchRules();
       } else {
         const error = await response.json();
@@ -250,7 +268,10 @@ const RulesManagement: React.FC = () => {
   const formatJson = (obj: any) => JSON.stringify(obj, null, 2);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <Header />
+      
+      <div className="max-w-7xl mx-auto px-8 py-12 space-y-6">
       {alert && (
         <Alert className={alert.type === 'error' ? 'border-red-500' : 'border-green-500'}>
           <AlertDescription>{alert.message}</AlertDescription>
@@ -259,12 +280,12 @@ const RulesManagement: React.FC = () => {
 
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Rules Management</h1>
-          <p className="text-gray-600">Manage underwriting rules and policies</p>
+          <h1 className="text-3xl font-bold">Business Rules</h1>
+          <p className="text-gray-600">Create and manage your underwriting rules in simple terms</p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Create Rule
+          Add New Rule
         </Button>
       </div>
 
@@ -273,7 +294,7 @@ const RulesManagement: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-4 h-4" />
-            Filters
+            Find Rules
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -292,16 +313,17 @@ const RulesManagement: React.FC = () => {
               </div>
             </div>
             <div>
-              <Label>Rule Type</Label>
+              <Label>Rule Category</Label>
               <Select value={filters.ruleType} onValueChange={(value) => setFilters({ ...filters, ruleType: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder="All categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All types</SelectItem>
-                  {ruleTypes.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
+                  <SelectItem value="all">All categories</SelectItem>
+                  <SelectItem value="discount">Discounts</SelectItem>
+                  <SelectItem value="coverage">Coverage Rules</SelectItem>
+                  <SelectItem value="risk_assessment">Risk Assessment</SelectItem>
+                  <SelectItem value="escalation">Escalation Rules</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -312,7 +334,7 @@ const RulesManagement: React.FC = () => {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="true">Active</SelectItem>
                   <SelectItem value="false">Inactive</SelectItem>
                 </SelectContent>
@@ -336,10 +358,10 @@ const RulesManagement: React.FC = () => {
                 {selectedRules.size} rules selected
               </span>
               <Button variant="outline" size="sm" onClick={() => handleBulkToggle(true)}>
-                Activate Selected
+                Turn On Selected
               </Button>
               <Button variant="outline" size="sm" onClick={() => handleBulkToggle(false)}>
-                Deactivate Selected
+                Turn Off Selected
               </Button>
               <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -403,10 +425,10 @@ const RulesManagement: React.FC = () => {
                           </span>
                         </div>
                         <div className="text-sm">
-                          <strong>Conditions:</strong> {JSON.stringify(rule.conditions)}
+                          <strong>When:</strong> {JSON.stringify(rule.conditions)}
                         </div>
                         <div className="text-sm">
-                          <strong>Action:</strong> {JSON.stringify(rule.action)}
+                          <strong>Then:</strong> {JSON.stringify(rule.action)}
                         </div>
                         <div className="text-xs text-gray-500">
                           Created: {new Date(rule.createdAt).toLocaleString()}
@@ -482,22 +504,23 @@ const RulesManagement: React.FC = () => {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create New Rule</DialogTitle>
+            <DialogTitle>Add New Rule</DialogTitle>
             <DialogDescription>
-              Create a new underwriting rule for automated decision making.
+              Set up a new business rule to help make decisions automatically.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Rule Type</Label>
+              <Label>What kind of rule is this?</Label>
               <Select value={newRule.ruleType} onValueChange={(value) => setNewRule({ ...newRule, ruleType: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select rule type" />
+                  <SelectValue placeholder="Choose a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ruleTypes.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
+                  <SelectItem value="discount">Discounts</SelectItem>
+                  <SelectItem value="coverage">Coverage Rules</SelectItem>
+                  <SelectItem value="risk_assessment">Risk Assessment</SelectItem>
+                  <SelectItem value="escalation">Escalation Rules</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -515,7 +538,7 @@ const RulesManagement: React.FC = () => {
               </Select>
             </div>
             <div>
-              <Label>Confidence (0-1)</Label>
+              <Label>How sure are we? (0 = not sure, 1 = very sure)</Label>
               <Input
                 type="number"
                 min="0"
@@ -525,23 +548,62 @@ const RulesManagement: React.FC = () => {
                 onChange={(e) => setNewRule({ ...newRule, confidence: parseFloat(e.target.value) })}
               />
             </div>
-            <div>
-              <Label>Conditions (JSON)</Label>
-              <Textarea
-                value={newRule.conditions}
-                onChange={(e) => setNewRule({ ...newRule, conditions: e.target.value })}
-                placeholder='{"example": "value"}'
-                rows={4}
-              />
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Check this field</Label>
+                <Input
+                  placeholder="e.g., revenue, customer_type"
+                  value={newRule.conditionField}
+                  onChange={(e) => setNewRule({ ...newRule, conditionField: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Comparison</Label>
+                <Select value={newRule.conditionOperator} onValueChange={(value) => setNewRule({ ...newRule, conditionOperator: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="equals">equals</SelectItem>
+                    <SelectItem value="greater_than">greater than</SelectItem>
+                    <SelectItem value="less_than">less than</SelectItem>
+                    <SelectItem value="contains">contains</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>This value</Label>
+                <Input
+                  placeholder="e.g., 100000, small_business"
+                  value={newRule.conditionValue}
+                  onChange={(e) => setNewRule({ ...newRule, conditionValue: e.target.value })}
+                />
+              </div>
             </div>
-            <div>
-              <Label>Action (JSON)</Label>
-              <Textarea
-                value={newRule.action}
-                onChange={(e) => setNewRule({ ...newRule, action: e.target.value })}
-                placeholder='{"example": "value"}'
-                rows={4}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Action type</Label>
+                <Select value={newRule.actionType} onValueChange={(value) => setNewRule({ ...newRule, actionType: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="discount">Apply discount</SelectItem>
+                    <SelectItem value="message">Show message</SelectItem>
+                    <SelectItem value="escalate">Escalate to human</SelectItem>
+                    <SelectItem value="approve">Auto approve</SelectItem>
+                    <SelectItem value="reject">Auto reject</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Action value</Label>
+                <Input
+                  placeholder="e.g., 10%, Contact manager"
+                  value={newRule.actionValue}
+                  onChange={(e) => setNewRule({ ...newRule, actionValue: e.target.value })}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -697,6 +759,7 @@ const RulesManagement: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };
