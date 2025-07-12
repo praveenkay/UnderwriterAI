@@ -11,7 +11,14 @@ const demoUsers = [
     role: "zurich_admin" as const,
     firstName: "Admin",
     lastName: "User",
-    company: "Zurich Insurance"
+    company: "Zurich Insurance",
+    phone: "+44 20 7648 7000",
+    address: "70 Mark Lane, London EC3R 7NQ, UK",
+    region: "London & South East",
+    title: "System Administrator",
+    department: "IT Operations",
+    joinDate: "January 2020",
+    specializations: ["System Administration", "User Management", "Security"]
   },
   {
     id: "2", 
@@ -21,7 +28,14 @@ const demoUsers = [
     role: "zurich_user" as const,
     firstName: "John",
     lastName: "Smith",
-    company: "Zurich Insurance"
+    company: "Zurich Insurance",
+    phone: "+44 20 7648 7001",
+    address: "70 Mark Lane, London EC3R 7NQ, UK",
+    region: "London & South East",
+    title: "Senior Underwriter",
+    department: "Commercial Underwriting",
+    joinDate: "March 2019",
+    specializations: ["Commercial Property", "Liability Insurance", "Risk Assessment"]
   },
   {
     id: "3",
@@ -31,7 +45,15 @@ const demoUsers = [
     role: "external_broker" as const,
     firstName: "Jane",
     lastName: "Broker",
-    company: "External Broker Ltd"
+    company: "External Broker Ltd",
+    phone: "+44 20 7123 4567",
+    address: "25 Fenchurch Street, London EC3M 3BE, UK",
+    region: "London & South East",
+    title: "Senior Insurance Broker",
+    department: "Commercial Lines",
+    licenseNumber: "UK-BRK-789123",
+    joinDate: "June 2018",
+    specializations: ["SME Insurance", "Commercial Property", "Professional Indemnity"]
   }
 ];
 

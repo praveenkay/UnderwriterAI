@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatSettings {
   autoSave: boolean;
@@ -27,6 +28,7 @@ interface ChatSettings {
 
 export default function ChatSettingsPanel() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
   const [settings, setSettings] = useState<ChatSettings>({
     autoSave: true,
     enableNotifications: true,
@@ -37,6 +39,9 @@ export default function ChatSettingsPanel() {
     autoEscalate: true,
     saveHistory: true
   });
+
+  // Check if user is external broker
+  const isExternalBroker = user?.role === 'external_broker';
 
   const handleSettingChange = (key: keyof ChatSettings, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -78,79 +83,84 @@ export default function ChatSettingsPanel() {
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* AI Behavior Settings */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Bot className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-medium text-gray-900">AI Behavior</h3>
-            </div>
-            
-            <div className="space-y-4 pl-7">
-              <div className="space-y-2">
-                <Label htmlFor="personality">AI Personality</Label>
-                <Select 
-                  value={settings.aiPersonality} 
-                  onValueChange={(value) => handleSettingChange('aiPersonality', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="professional">Professional</SelectItem>
-                    <SelectItem value="friendly">Friendly</SelectItem>
-                    <SelectItem value="formal">Formal</SelectItem>
-                    <SelectItem value="concise">Concise</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confidence">Confidence Threshold: {settings.confidenceThreshold}%</Label>
-                <Slider
-                  value={[settings.confidenceThreshold]}
-                  onValueChange={(value) => handleSettingChange('confidenceThreshold', value[0])}
-                  max={100}
-                  min={50}
-                  step={5}
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500">
-                  Minimum confidence level before escalating to human review
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="speed">Response Speed: {settings.responseSpeed}%</Label>
-                <Slider
-                  value={[settings.responseSpeed]}
-                  onValueChange={(value) => handleSettingChange('responseSpeed', value[0])}
-                  max={100}
-                  min={25}
-                  step={25}
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500">
-                  Faster responses may have lower accuracy
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="auto-escalate">Auto-escalate complex queries</Label>
-                  <p className="text-xs text-gray-500">
-                    Automatically escalate queries that exceed complexity threshold
-                  </p>
+          {/* Hide entire AI Behavior section for external brokers */}
+          {!isExternalBroker && (
+            <>
+              {/* AI Behavior Settings */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Bot className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-medium text-gray-900">AI Behavior</h3>
                 </div>
-                <Switch
-                  id="auto-escalate"
-                  checked={settings.autoEscalate}
-                  onCheckedChange={(checked) => handleSettingChange('autoEscalate', checked)}
-                />
-              </div>
-            </div>
-          </div>
+                
+                <div className="space-y-4 pl-7">
+                  <div className="space-y-2">
+                    <Label htmlFor="personality">AI Personality</Label>
+                    <Select 
+                      value={settings.aiPersonality} 
+                      onValueChange={(value) => handleSettingChange('aiPersonality', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="friendly">Friendly</SelectItem>
+                        <SelectItem value="formal">Formal</SelectItem>
+                        <SelectItem value="concise">Concise</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-          <Separator />
+                  <div className="space-y-2">
+                    <Label htmlFor="confidence">Confidence Threshold: {settings.confidenceThreshold}%</Label>
+                    <Slider
+                      value={[settings.confidenceThreshold]}
+                      onValueChange={(value) => handleSettingChange('confidenceThreshold', value[0])}
+                      max={100}
+                      min={50}
+                      step={5}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Minimum confidence level before escalating to human review
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="speed">Response Speed: {settings.responseSpeed}%</Label>
+                    <Slider
+                      value={[settings.responseSpeed]}
+                      onValueChange={(value) => handleSettingChange('responseSpeed', value[0])}
+                      max={100}
+                      min={25}
+                      step={25}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Faster responses may have lower accuracy
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="auto-escalate">Auto-escalate complex queries</Label>
+                      <p className="text-xs text-gray-500">
+                        Automatically escalate queries that exceed complexity threshold
+                      </p>
+                    </div>
+                    <Switch
+                      id="auto-escalate"
+                      checked={settings.autoEscalate}
+                      onCheckedChange={(checked) => handleSettingChange('autoEscalate', checked)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+            </>
+          )}
 
           {/* Interface Settings */}
           <div className="space-y-4">

@@ -1,8 +1,8 @@
 import Header from "../components/Header";
 import ChatInterface from "../components/ChatInterface";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { MessageSquare, LogOut } from "lucide-react";
+import { MessageSquare } from "lucide-react";
+import UserProfilePanel from "@/components/UserProfilePanel";
 
 export default function ChatPage() {
   const { user, logout, isExternalBroker } = useAuth();
@@ -25,14 +25,7 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-xs text-gray-500">{user?.company || 'External Broker'}</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={logout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </Button>
+                <UserProfilePanel />
               </div>
             </div>
           </div>

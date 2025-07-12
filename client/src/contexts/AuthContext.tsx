@@ -9,6 +9,14 @@ export interface User {
   lastName?: string;
   company?: string;
   profileImageUrl?: string;
+  phone?: string;
+  address?: string;
+  region?: string;
+  title?: string;
+  department?: string;
+  licenseNumber?: string;
+  joinDate?: string;
+  specializations?: string[];
 }
 
 interface AuthContextType {

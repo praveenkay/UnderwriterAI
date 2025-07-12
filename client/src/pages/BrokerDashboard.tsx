@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, FileText, LogOut } from 'lucide-react';
+import { MessageSquare, FileText } from 'lucide-react';
+import UserProfilePanel from '@/components/UserProfilePanel';
 
 export default function BrokerDashboard() {
   const { user, logout } = useAuth();
@@ -45,14 +46,7 @@ export default function BrokerDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
-                <p className="text-xs text-gray-500">{user?.company || 'External Broker'}</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={logout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              <UserProfilePanel />
             </div>
           </div>
         </div>
