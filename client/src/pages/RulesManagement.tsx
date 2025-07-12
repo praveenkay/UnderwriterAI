@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Edit, Plus, ToggleLeft, ToggleRight, Eye, Search, Filter, AlertTriangle, Clock, User, Calendar } from 'lucide-react';
+import { Trash2, Edit, Plus, ToggleLeft, ToggleRight, Eye, Search, Filter, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -72,11 +72,13 @@ const RulesManagement: React.FC = () => {
   });
 
   const [editableRule, setEditableRule] = useState({
+    ruleType: '',
     conditionField: '',
     conditionOperator: 'equals',
     conditionValue: '',
     actionType: 'discount',
-    actionValue: ''
+    actionValue: '',
+    confidence: 0.5
   });
 
   const ruleTypes = ['discount', 'coverage', 'risk_assessment', 'escalation', 'compliance', 'pricing', 'underwriting'];
@@ -171,8 +173,10 @@ const RulesManagement: React.FC = () => {
       
       const updatedRule = {
         ...currentRule,
+        ruleType: editableRule.ruleType,
         conditions,
-        action
+        action,
+        confidence: editableRule.confidence
       };
 
       const response = await fetch(`/api/rules/${currentRule.id}`, {
@@ -694,20 +698,20 @@ const RulesManagement: React.FC = () => {
       </Dialog>
 
       {/* Edit Rule Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={i </DialogDescr   </DialogHeader>
-          {currentRule && (
-            <div className="space-y-4">
-              <div>
-                <Label>Rule Type</Label>
-                <Select
-                  value={currentRule.ruleType}
-                  onValueChange={(value) => setCurrentRule({ ...currentRule, ruleType: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelRType
-                  <SelectContent>
-                    {ruleTypes.map(type => (
+      <Dialog open={showEditDialog} onOpenChange={g </escr  Descr    / {currHu dr
+          {currentRuil && (me="space-y-4">
+             vcassNam="spc-y-4"
+               d vpe</Label>
+              e<Label>RTy</Lbl>
+              Se u=rRule.ruleType}
+                  value=      >.ruleType}
+              onValue ha ge={(<alue) => sStCureenlRule({e...ctTriggRule,er>leType: vau })}
+          >
+                u <Sctrger>
+                    <SeeVal />
+                  </S lTTyp
+               <Sel c Conetnt>t>
+                    {    {ruyspmap(t( => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
                   </SelectContent>
