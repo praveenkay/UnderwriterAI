@@ -4,6 +4,7 @@ import MetricsCards from "../components/MetricsCards";
 import ChatInterface from "../components/ChatInterface";
 
 import ActivityFeed from "../components/ActivityFeed";
+import Footer from "../components/Footer";
 
 export default function Dashboard() {
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function Dashboard() {
         {/* Hero Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-medium text-gray-900 tracking-tight mb-3">
-            AgentVerse Dashboard
+            Zurich Underwriter Dashboard
           </h1>
           <p className="text-gray-600 text-lg leading-relaxed max-w-2xl">
             AI-powered underwriting assistant for SME business insurance. View analytics, 
@@ -62,6 +63,8 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 }

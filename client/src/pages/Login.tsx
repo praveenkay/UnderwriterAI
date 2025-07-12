@@ -62,8 +62,8 @@ export default function Login() {
               <Shield className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Zurich Underwriter AI</h1>
-          <p className="text-gray-600 mt-2">Intelligent underwriting decisions powered by AI</p>
+          <h1 className="text-3xl font-bold text-gray-900">Zurich Underwriter</h1>
+          <p className="text-gray-600 mt-2">Intelligent underwriting decisions powered by Zurich AI</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">

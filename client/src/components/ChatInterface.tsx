@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Bot, User, Send, Paperclip, CheckCircle, AlertTriangle } from "lucide-react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import ChatHistoryPanel from "./ChatHistoryPanel";
-import ChatSettingsPanel from "./ChatSettingsPanel";
 import type { ChatMessage } from "../types";
 
 export default function ChatInterface() {
@@ -173,7 +172,6 @@ export default function ChatInterface() {
           </div>
           <div className="flex items-center space-x-2">
             <ChatHistoryPanel />
-            <ChatSettingsPanel />
           </div>
         </div>
 

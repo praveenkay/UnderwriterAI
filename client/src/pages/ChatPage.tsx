@@ -3,6 +3,7 @@ import ChatInterface from "../components/ChatInterface";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageSquare } from "lucide-react";
 import UserProfilePanel from "@/components/UserProfilePanel";
+import Footer from "@/components/Footer";
 
 export default function ChatPage() {
   const { user, logout, isExternalBroker } = useAuth();
@@ -15,16 +16,38 @@ export default function ChatPage() {
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <div className="bg-blue-600 p-2 rounded-lg mr-3">
-                  <MessageSquare className="h-6 w-6 text-white" />
+              <div className="flex items-center space-x-8">
+                <div className="flex items-center">
+                  <div className="bg-blue-600 p-2 rounded-lg mr-3">
+                    <MessageSquare className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold text-gray-900">Zurich Underwriter</h1>
+                    <p className="text-sm text-gray-500">ZURICH AI UNDERWRITING</p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-gray-900">Zurich AI Assistant</h1>
-                  <p className="text-sm text-gray-500">Broker Chat Portal</p>
-                </div>
+                
+                {/* Navigation Links for External Brokers - left aligned */}
+                <nav className="flex space-x-8">
+                  <a 
+                    href="/broker-dashboard" 
+                    className="text-gray-600 hover:text-gray-900 font-medium text-sm uppercase tracking-wide pb-4 transition-colors"
+                  >
+                    DASHBOARD
+                  </a>
+                  <a 
+                    href="/chat" 
+                    className="text-blue-600 font-medium text-sm uppercase tracking-wide border-b-2 border-blue-600 pb-4"
+                  >
+                    CHAT
+                  </a>
+                </nav>
               </div>
+              
               <div className="flex items-center space-x-4">
+                <div className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                  2
+                </div>
                 <UserProfilePanel />
               </div>
             </div>
@@ -43,6 +66,8 @@ export default function ChatPage() {
 
           <ChatInterface />
         </div>
+        
+        <Footer />
       </div>
     );
   }
@@ -67,6 +92,8 @@ export default function ChatPage() {
           <ChatInterface />
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 }

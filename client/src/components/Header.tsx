@@ -25,7 +25,7 @@ export default function Header() {
                   </svg>
                 </div>
                 <div>
-                  <span className="text-xl-swiss text-gray-900">AgentVerse</span>
+                  <span className="text-xl-swiss text-gray-900">Zurich Underwriter</span>
                   <div className="text-xs text-gray-500 font-medium tracking-wide">ZURICH AI UNDERWRITING</div>
                 </div>
               </div>
