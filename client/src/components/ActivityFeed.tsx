@@ -153,7 +153,7 @@ export default function ActivityFeed() {
             onClick={() => window.open('/rules', '_blank')}
           >
             <Settings className="h-4 w-4 text-gray-500 mr-3" />
-            <span className="text-sm font-medium text-gray-900">Manage Rules</span>
+            <span className="text-sm font-medium text-gray-900">Extracted Rules</span>
           </Button>
           
           <Button 

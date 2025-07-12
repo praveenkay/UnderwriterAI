@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, MessageSquare, CheckCircle, Clock, AlertCircle, Download, Trash2, Eye, Settings } from "lucide-react";
+import { FileText, MessageSquare, CheckCircle, Clock, AlertCircle, Download, Trash2, Eye, Settings, AlertTriangle, User, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Document } from "../types";
 
@@ -76,9 +76,48 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDelete = (documentId: number) => {
-    if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
-      deleteMutation.mutate(documentId);
+  const handleDeleteRequest = async (documentId: number, filename: string) => {
+    const reason = prompt('Please provide a reason for requesting deletion of this document:');
+    if (!reason || !reason.trim()) {
+      toast({
+        title: "Deletion request cancelled",
+        description: "A reason is required to request document deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/documents/delete-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId,
+          filename,
+          reason: reason.trim(),
+          requestedBy: 'current_user', // This would come from auth context
+          requestedAt: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Delete request submitted",
+          description: "Your request has been sent to administrators for review.",
+        });
+      } else {
+        toast({
+          title: "Request failed",
+          description: "Failed to submit delete request. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Request failed",
+        description: "Failed to submit delete request. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -150,7 +189,7 @@ export default function DocumentsPage() {
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm" className="flex items-center space-x-2">
                           <Settings className="h-4 w-4" />
-                          <span>Manage Rules</span>
+                          <span>Extracted Rules</span>
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -291,11 +330,11 @@ export default function DocumentsPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDelete(doc.id)}
-                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Delete document"
+                                onClick={() => handleDeleteRequest(doc.id, doc.filename)}
+                                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                title="Request deletion"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <AlertTriangle className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>

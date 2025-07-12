@@ -2,8 +2,7 @@ import React, { useEffect } from "react";
 import Header from "../components/Header";
 import MetricsCards from "../components/MetricsCards";
 import ChatInterface from "../components/ChatInterface";
-
-import ActivityFeed from "../components/ActivityFeed";
+import QuickActions from "../components/QuickActions";
 import Footer from "../components/Footer";
 
 export default function Dashboard() {
@@ -33,33 +32,13 @@ export default function Dashboard() {
 
         <MetricsCards />
         
-        {/* AI Chat Assistant - moved below metrics cards */}
-        <div className="grid grid-cols-1 gap-8 mt-8 mb-8">
-          <ChatInterface />
-        </div>
-        
-        <div className="grid grid-cols-1 gap-8 mt-8 mb-8">
-          <ActivityFeed />
-        </div>
-        
-        {/* Swiss Design Footer Info */}
-        <div className="mt-16 pt-8 border-t border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-gray-500">
-            <div>
-              <div className="font-medium text-gray-900 mb-2">Response Time</div>
-              <div>Average: 1.2s • Target: &lt;2s</div>
-            </div>
-            <div>
-              <div className="font-medium text-gray-900 mb-2">Automation Rate</div>
-              <div>Current: 73% • Goal: 80%</div>
-            </div>
-            <div>
-              <div className="font-medium text-gray-900 mb-2">System Status</div>
-              <div className="flex items-center space-x-2">
-                <div className="status-dot status-active"></div>
-                <span>All systems operational</span>
-              </div>
-            </div>
+        {/* AI Chat Assistant and Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 mb-8">
+          <div className="lg:col-span-2">
+            <ChatInterface />
+          </div>
+          <div className="lg:col-span-1">
+            <QuickActions />
           </div>
         </div>
       </div>

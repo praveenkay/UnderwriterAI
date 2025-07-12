@@ -1105,6 +1105,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete request endpoints for Zurich User requirements
+  
+  // Document delete request
+  app.post('/api/documents/delete-request', async (req, res) => {
+    try {
+      const { documentId, filename, reason, requestedBy, requestedAt } = req.body;
+      
+      if (!documentId || !reason || !requestedBy) {
+        return res.status(400).json({ 
+          error: 'Missing required fields: documentId, reason, requestedBy' 
+        });
+      }
+
+      // Store the delete request (in a real system, this would go to an admin queue)
+      const deleteRequest = {
+        id: Date.now(),
+        type: 'document',
+        documentId,
+        filename,
+        reason,
+        requestedBy,
+        requestedAt: requestedAt || new Date().toISOString(),
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+
+      // For demo purposes, we'll just log it and return success
+      console.log('Document delete request submitted:', deleteRequest);
+      
+      res.json({
+        message: 'Delete request submitted successfully',
+        requestId: deleteRequest.id,
+        status: 'pending'
+      });
+    } catch (error) {
+      console.error("Document delete request error:", error);
+      res.status(500).json({ error: 'Failed to submit delete request' });
+    }
+  });
+
+  // Rule delete request
+  app.post('/api/rules/delete-request', async (req, res) => {
+    try {
+      const { ruleId, reason, requestedBy, requestedAt } = req.body;
+      
+      if (!ruleId || !reason || !requestedBy) {
+        return res.status(400).json({ 
+          error: 'Missing required fields: ruleId, reason, requestedBy' 
+        });
+      }
+
+      // Get rule details for the request
+      const rule = await storage.getUnderwritingRule(ruleId);
+      if (!rule) {
+        return res.status(404).json({ error: 'Rule not found' });
+      }
+
+      // Store the delete request (in a real system, this would go to an admin queue)
+      const deleteRequest = {
+        id: Date.now(),
+        type: 'rule',
+        ruleId,
+        ruleType: rule.ruleType,
+        reason,
+        requestedBy,
+        requestedAt: requestedAt || new Date().toISOString(),
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+
+      // For demo purposes, we'll just log it and return success
+      console.log('Rule delete request submitted:', deleteRequest);
+      
+      res.json({
+        message: 'Delete request submitted successfully',
+        requestId: deleteRequest.id,
+        status: 'pending'
+      });
+    } catch (error) {
+      console.error("Rule delete request error:", error);
+      res.status(500).json({ error: 'Failed to submit delete request' });
+    }
+  });
+
+  // Get all delete requests (for admin interface)
+  app.get('/api/admin/delete-requests', async (req, res) => {
+    try {
+      // In a real system, this would fetch from a database
+      // For demo, return empty array
+      res.json([]);
+    } catch (error) {
+      console.error("Delete requests fetch error:", error);
+      res.status(500).json({ error: 'Failed to fetch delete requests' });
+    }
+  });
+
   // === END RULES MANAGEMENT ENDPOINTS ===
 
   // === CHAT INGESTION AND FINE-TUNING ENDPOINTS ===

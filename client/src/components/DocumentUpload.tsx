@@ -367,8 +367,9 @@ export default function DocumentUpload() {
           <input
             type="file"
             onChange={handleFileSelect}
-            accept=".txt,.pdf,.doc,.docx,.csv,.xlsx"
+            accept=".txt,.pdf,.doc,.docx,.csv,.xlsx,.zip"
             multiple={isBulkUpload}
+            {...(isBulkUpload ? { webkitdirectory: "" } : {})}
             className="hidden"
             id="file-upload"
           />
