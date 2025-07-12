@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Edit, Plus, ToggleLeft, ToggleRight, Eye, Search, Filter, AlertTriangle, Clock, User, Calendar } from 'lucide-react';
+import { Trash2, Edit, Plus, ToggleLeft, ToggleRight, Eye, Search, Filter } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -56,30 +56,16 @@ const RulesManagement: React.FC = () => {
     search: ''
   });
   const [alert, setAlert] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-  const [showDeleteRequestDialog, setShowDeleteRequestDialog] = useState(false);
-  const [ruleToDelete, setRuleToDelete] = useState<Rule | null>(null);
-  const [deleteReason, setDeleteReason] = useState('');
 
   const [newRule, setNewRule] = useState({
     ruleType: '',
-    conditionField: '',
-    conditionOperator: 'equals',
-    conditionValue: '',
-    actionType: 'discount',
-    actionValue: '',
+    conditions: '{}',
+    action: '{}',
     confidence: 0.5,
     source: 'manual'
   });
 
-  const [editableRule, setEditableRule] = useState({
-    conditionField: '',
-    conditionOperator: 'equals',
-    conditionValue: '',
-    actionType: 'discount',
-    actionValue: ''
-  });
-
-  const ruleTypes = ['discount', 'coverage', 'risk_assessment', 'escalation', 'compliance', 'pricing', 'underwriting'];
+  const ruleTypes = ['discount', 'coverage', 'risk_assessment', 'escalation'];
   const sources = ['manual', 'extracted_from_chat', 'guideline_document'];
 
   const showAlert = (type: 'success' | 'error', message: string) => {
@@ -95,8 +81,8 @@ const RulesManagement: React.FC = () => {
         limit: '20'
       });
       
-      if (filters.ruleType && filters.ruleType !== 'all') params.append('ruleType', filters.ruleType);
-      if (filters.isActive && filters.isActive !== 'all') params.append('isActive', filters.isActive);
+      if (filters.ruleType) params.append('ruleType', filters.ruleType);
+      if (filters.isActive) params.append('isActive', filters.isActive);
 
       const response = await fetch(`/api/rules/all?${params}`);
       const data: RulesResponse = await response.json();
@@ -123,34 +109,20 @@ const RulesManagement: React.FC = () => {
 
   const handleCreateRule = async () => {
     try {
-      const conditions = { [newRule.conditionField]: { [newRule.conditionOperator]: newRule.conditionValue } };
-      const action = { [newRule.actionType]: newRule.actionValue };
-      
       const response = await fetch('/api/rules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ruleType: newRule.ruleType,
-          conditions,
-          action,
-          confidence: newRule.confidence,
-          source: newRule.source
+          ...newRule,
+          conditions: JSON.parse(newRule.conditions),
+          action: JSON.parse(newRule.action)
         })
       });
 
       if (response.ok) {
         showAlert('success', 'Rule created successfully');
         setShowCreateDialog(false);
-        setNewRule({ 
-          ruleType: '', 
-          conditionField: '',
-          conditionOperator: 'equals',
-          conditionValue: '',
-          actionType: 'discount',
-          actionValue: '',
-          confidence: 0.5, 
-          source: 'manual' 
-        });
+        setNewRule({ ruleType: '', conditions: '{}', action: '{}', confidence: 0.5, source: 'manual' });
         fetchRules();
       } else {
         const error = await response.json();
@@ -165,40 +137,14 @@ const RulesManagement: React.FC = () => {
     if (!currentRule) return;
 
     try {
-      // Convert plain English back to JSON
-      const conditions = { [editableRule.conditionField]: { [editableRule.conditionOperator]: editableRule.conditionValue } };
-      const action = { [editableRule.actionType]: editableRule.actionValue };
-      
-      const updatedRule = {
-        ...currentRule,
-        conditions,
-        action
-      };
-
       const response = await fetch(`/api/rules/${currentRule.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedRule)
+        body: JSON.stringify(currentRule)
       });
 
       if (response.ok) {
-        // Trigger LLM fine-tuning after successful rule update
-        try {
-          await fetch('/api/fine-tuning/jobs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              trigger: 'rule_update',
-              ruleId: currentRule.id,
-              changes: { conditions, action }
-            })
-          });
-        } catch (fineTuningError) {
-          console.log('Fine-tuning trigger failed:', fineTuningError);
-          // Don't fail the rule update if fine-tuning fails
-        }
-
-        showAlert('success', 'Rule updated successfully and LLM training initiated');
+        showAlert('success', 'Rule updated successfully');
         setShowEditDialog(false);
         setCurrentRule(null);
         fetchRules();
@@ -211,59 +157,21 @@ const RulesManagement: React.FC = () => {
     }
   };
 
-  // Helper function to convert JSON to plain English for editing
-  const convertRuleToPlainEnglish = (rule: Rule) => {
-    const conditionField = Object.keys(rule.conditions)[0] || '';
-    const conditionObj = rule.conditions[conditionField] || {};
-    const conditionOperator = Object.keys(conditionObj)[0] || 'equals';
-    const conditionValue = conditionObj[conditionOperator] || '';
-    
-    const actionType = Object.keys(rule.action)[0] || 'discount';
-    const actionValue = rule.action[actionType] || '';
-    
-    return {
-      conditionField,
-      conditionOperator,
-      conditionValue: String(conditionValue),
-      actionType,
-      actionValue: String(actionValue)
-    };
-  };
-
-  const handleDeleteRequest = (rule: Rule) => {
-    setRuleToDelete(rule);
-    setShowDeleteRequestDialog(true);
-  };
-
-  const submitDeleteRequest = async () => {
-    if (!ruleToDelete || !deleteReason.trim()) {
-      showAlert('error', 'Please provide a reason for deletion');
-      return;
-    }
+  const handleDeleteRule = async (ruleId: number) => {
+    if (!confirm('Are you sure you want to delete this rule?')) return;
 
     try {
-      // Create a deletion request instead of actually deleting
-      const response = await fetch('/api/rules/delete-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ruleId: ruleToDelete.id,
-          reason: deleteReason,
-          requestedBy: 'current_user', // This would come from auth context
-          requestedAt: new Date().toISOString()
-        })
-      });
-
+      const response = await fetch(`/api/rules/${ruleId}`, { method: 'DELETE' });
+      
       if (response.ok) {
-        showAlert('success', 'Delete request submitted to administrators');
-        setShowDeleteRequestDialog(false);
-        setRuleToDelete(null);
-        setDeleteReason('');
+        showAlert('success', 'Rule deleted successfully');
+        fetchRules();
       } else {
-        showAlert('error', 'Failed to submit delete request');
+        const error = await response.json();
+        showAlert('error', error.error || 'Failed to delete rule');
       }
     } catch (error) {
-      showAlert('error', 'Failed to submit delete request');
+      showAlert('error', 'Failed to delete rule');
     }
   };
 
@@ -345,8 +253,7 @@ const RulesManagement: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Header />
-      
-      <div className="max-w-7xl mx-auto px-8 py-12 space-y-6">
+      <div className="p-6 space-y-6">
       {alert && (
         <Alert className={alert.type === 'error' ? 'border-red-500' : 'border-green-500'}>
           <AlertDescription>{alert.message}</AlertDescription>
@@ -355,12 +262,12 @@ const RulesManagement: React.FC = () => {
 
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Underwriting Rules</h1>
-          <p className="text-gray-600">Create and manage your underwriting rules in simple terms</p>
+          <h1 className="text-3xl font-bold">Rules Management</h1>
+          <p className="text-gray-600">Manage underwriting rules and policies</p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Add New Rule
+          Create Rule
         </Button>
       </div>
 
@@ -369,7 +276,7 @@ const RulesManagement: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-4 h-4" />
-            Find Rules
+            Filters
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -388,17 +295,16 @@ const RulesManagement: React.FC = () => {
               </div>
             </div>
             <div>
-              <Label>Rule Category</Label>
+              <Label>Rule Type</Label>
               <Select value={filters.ruleType} onValueChange={(value) => setFilters({ ...filters, ruleType: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All categories" />
+                  <SelectValue placeholder="All types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  <SelectItem value="discount">Discounts</SelectItem>
-                  <SelectItem value="coverage">Coverage Rules</SelectItem>
-                  <SelectItem value="risk_assessment">Risk Assessment</SelectItem>
-                  <SelectItem value="escalation">Escalation Rules</SelectItem>
+                  <SelectItem value="">All types</SelectItem>
+                  {ruleTypes.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -409,7 +315,7 @@ const RulesManagement: React.FC = () => {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="">All statuses</SelectItem>
                   <SelectItem value="true">Active</SelectItem>
                   <SelectItem value="false">Inactive</SelectItem>
                 </SelectContent>
@@ -433,10 +339,10 @@ const RulesManagement: React.FC = () => {
                 {selectedRules.size} rules selected
               </span>
               <Button variant="outline" size="sm" onClick={() => handleBulkToggle(true)}>
-                Turn On Selected
+                Activate Selected
               </Button>
               <Button variant="outline" size="sm" onClick={() => handleBulkToggle(false)}>
-                Turn Off Selected
+                Deactivate Selected
               </Button>
               <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -500,10 +406,10 @@ const RulesManagement: React.FC = () => {
                           </span>
                         </div>
                         <div className="text-sm">
-                          <strong>When:</strong> {JSON.stringify(rule.conditions)}
+                          <strong>Conditions:</strong> {JSON.stringify(rule.conditions)}
                         </div>
                         <div className="text-sm">
-                          <strong>Then:</strong> {JSON.stringify(rule.action)}
+                          <strong>Action:</strong> {JSON.stringify(rule.action)}
                         </div>
                         <div className="text-xs text-gray-500">
                           Created: {new Date(rule.createdAt).toLocaleString()}
@@ -541,10 +447,9 @@ const RulesManagement: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteRequest(rule)}
-                        title="Request deletion"
+                        onClick={() => handleDeleteRule(rule.id)}
                       >
-                        <AlertTriangle className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -580,23 +485,22 @@ const RulesManagement: React.FC = () => {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add New Rule</DialogTitle>
+            <DialogTitle>Create New Rule</DialogTitle>
             <DialogDescription>
-              Set up a new business rule to help make decisions automatically.
+              Create a new underwriting rule for automated decision making.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>What kind of rule is this?</Label>
+              <Label>Rule Type</Label>
               <Select value={newRule.ruleType} onValueChange={(value) => setNewRule({ ...newRule, ruleType: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a category" />
+                  <SelectValue placeholder="Select rule type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="discount">Discounts</SelectItem>
-                  <SelectItem value="coverage">Coverage Rules</SelectItem>
-                  <SelectItem value="risk_assessment">Risk Assessment</SelectItem>
-                  <SelectItem value="escalation">Escalation Rules</SelectItem>
+                  {ruleTypes.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -614,7 +518,7 @@ const RulesManagement: React.FC = () => {
               </Select>
             </div>
             <div>
-              <Label>How sure are we? (0 = not sure, 1 = very sure)</Label>
+              <Label>Confidence (0-1)</Label>
               <Input
                 type="number"
                 min="0"
@@ -624,62 +528,23 @@ const RulesManagement: React.FC = () => {
                 onChange={(e) => setNewRule({ ...newRule, confidence: parseFloat(e.target.value) })}
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>Check this field</Label>
-                <Input
-                  placeholder="e.g., revenue, customer_type"
-                  value={newRule.conditionField}
-                  onChange={(e) => setNewRule({ ...newRule, conditionField: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Comparison</Label>
-                <Select value={newRule.conditionOperator} onValueChange={(value) => setNewRule({ ...newRule, conditionOperator: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="equals">equals</SelectItem>
-                    <SelectItem value="greater_than">greater than</SelectItem>
-                    <SelectItem value="less_than">less than</SelectItem>
-                    <SelectItem value="contains">contains</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>This value</Label>
-                <Input
-                  placeholder="e.g., 100000, small_business"
-                  value={newRule.conditionValue}
-                  onChange={(e) => setNewRule({ ...newRule, conditionValue: e.target.value })}
-                />
-              </div>
+            <div>
+              <Label>Conditions (JSON)</Label>
+              <Textarea
+                value={newRule.conditions}
+                onChange={(e) => setNewRule({ ...newRule, conditions: e.target.value })}
+                placeholder='{"example": "value"}'
+                rows={4}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Action type</Label>
-                <Select value={newRule.actionType} onValueChange={(value) => setNewRule({ ...newRule, actionType: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="discount">Apply discount</SelectItem>
-                    <SelectItem value="message">Show message</SelectItem>
-                    <SelectItem value="escalate">Escalate to human</SelectItem>
-                    <SelectItem value="approve">Auto approve</SelectItem>
-                    <SelectItem value="reject">Auto reject</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Action value</Label>
-                <Input
-                  placeholder="e.g., 10%, Contact manager"
-                  value={newRule.actionValue}
-                  onChange={(e) => setNewRule({ ...newRule, actionValue: e.target.value })}
-                />
-              </div>
+            <div>
+              <Label>Action (JSON)</Label>
+              <Textarea
+                value={newRule.action}
+                onChange={(e) => setNewRule({ ...newRule, action: e.target.value })}
+                placeholder='{"example": "value"}'
+                rows={4}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -694,7 +559,14 @@ const RulesManagement: React.FC = () => {
       </Dialog>
 
       {/* Edit Rule Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={i </DialogDescr   </DialogHeader>
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Rule</DialogTitle>
+            <DialogDescription>
+              Modify the selected underwriting rule.
+            </DialogDescription>
+          </DialogHeader>
           {currentRule && (
             <div className="space-y-4">
               <div>
@@ -705,7 +577,7 @@ const RulesManagement: React.FC = () => {
                 >
                   <SelectTrigger>
                     <SelectValue />
-                  </SelRType
+                  </SelectTrigger>
                   <SelectContent>
                     {ruleTypes.map(type => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
@@ -714,14 +586,18 @@ const RulesManagement: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <Lab{ruCoTypes.n p(>yp (
-                  ty k"y{yp} {ty}{y}
-                  va))}
+                <Label>Confidence (0-1)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={currentRule.confidence}
                   onChange={(e) => setCurrentRule({ ...currentRule, confidence: parseFloat(e.target.value) })}
                 />
               </div>
               <div>
-                <Label>Confidonc(J</-
+                <Label>Conditions (JSON)</Label>
                 <Textarea
                   value={formatJson(currentRule.conditions)}
                   onChange={(e) => {
@@ -731,207 +607,95 @@ const RulesManagement: React.FC = () => {
                     } catch {
                       // Invalid JSON, keep the string for editing
                     }
-              <div>    }}
-              r <Lsl>Citions(JSON)</Lal
-                /Txa
-                </>aue={formtJon(currentRul.condtn)}
-              <dionChange={(e)v= {
-               <LabSOry/{
-                  <Texcorst parsed = JSON.earse(e.target.valae);
-                  valusetCurrontRua(({ .crcurnultRel.actondini)ns: pasd });
-                 onC}hcn=h {
-                     t//rI vlid JSON, kphstrngfr eg
-                    }
-                
+                  }}
                   rows={4}
                 />
-                  setCurrentRule({ ...currentRule, action: parsed });
-                } catch {
-                  // InActJON (JSON), keep the string for editing
-                }Txarea
-              }}formatJson(currna)
-              rows={
-                try/{
->              </divconst>parsed=JON.pars(.aet.valu);
-           </div>setCurrentRule({...currntRu, aion: prsd});
-         )}}ach {
-            <DialogFoo//tInvalideJ>ON, kep th sring fr ediig
-       <Button varie}(false)}>
-              Canc}}
-el          rows={4}
-  </Button>
-             <</div>
-Button onClUdiv
+              </div>
+              <div>
+                <Label>Action (JSON)</Label>
+                <Textarea
+                  value={formatJson(currentRule.action)}
+                  onChange={(e) => {
+                    try {
+                      const parsed = JSON.parse(e.target.value);
+                      setCurrentRule({ ...currentRule, action: parsed });
+                    } catch {
+                      // Invalid JSON, keep the string for editing
+                    }
+                  }}
+                  rows={4}
+                />
+              </div>
+            </div>
           )}
-    UpdateuDiagFoor
-            <Button<variant="outline"/onClick={()B=>ustShowEditDiaog(fals)}
-          </DiCancel>
-        </Din/Buttont>
-      </DialButton onCck={hndUpdtRue}
-Udae Rule
-      {/* Vi</Button>
-ew Rule Di</Dio}oFootr>
-      <D</DialogContent>
-ialog </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateRule}>
+              Update Rule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-open={D/* Vlow nOpe DgtSog */wViewDialog}>
-      <DisloN opanme-howVm-wDlwyog}>OpeChng={sShowViwDiog>
-        <DialogContent className="max-w-4xl max-h-[90vh]<overflow-y-auto"er>
-          gDtalogHeadere>Rule Details</DialogTitle>
-          </<DialogTitle>RuleDDetailsogDealogTitleder>
-          reDtalogHeaderule && (
-          {cuiglntRu2eg&&4(
-            <divv>ac-y-"
-                <Label>ID</Label>
-                <p className="text-sm bg-gray-100 p-2 rounded">{currentRule.id}</p>
-                </v>ID
-                <d>p cassNam="ext-smbg-gray-100 p-2 rounded">{currentRule.id}</p>
-                </div>
-  <Lab          </Lv>
-                  <Lbe>></Label>
-                  <p<className="text-smpbg-gray-100 p-2crlatdxd">-cgrr-n2ndedrrrulp></p>
-                </div>
-        </di    <div>
-            <div>Lab>Sourc</Labl
-                <L<paclassName="text-smbbg-gray-100ep-2lroundrd">{curreneRuLe.soarcb}<lp>
-                </div>
-            <p cldtvsm bg-gray-100 p-2 rounded">{currentRule.source}</p>
-            </div>Lab>Saus</Labl
-          <div>p cassNam="xt-sbg-gry-100 -2rdd"
-              <Label{currtntRuat.isAu/ivL ?b'Actie' :'Iniv'}
-                  </p>
-       <p clate>div
+      {/* View Rule Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Rule Details</DialogTitle>
+          </DialogHeader>
+          {currentRule && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-              {currLabii>Ctnfidvnce'}Lab
-            </p>p cassNam="xt-sbg-gry-100 p-2 rondd
-              </div>{(currntRu.fidce * 100).oFixed(1)}%
-              <div>p
-                <Label>Confidence</Label>
-                <p className="text-sm bg-gray-100 p-2 rounded">
-                  {(curreCreaRiddence * 100).toFixed(1)}%
-                </p>cassNmtxt-sm bg-ray-0 p-2rudd>
-              <div>nw Da(rrecreatA).oLcSin(lassName="text-sm bg-gray-100 p-2 rounded">
-                    pw Date(currentRule.createdAt).toLocaleString()}
+                  <Label>ID</Label>
+                  <p className="text-sm bg-gray-100 p-2 rounded">{currentRule.id}</p>
+                </div>
+                <div>
+                  <Label>Type</Label>
+                  <p className="text-sm bg-gray-100 p-2 rounded">{currentRule.ruleType}</p>
+                </div>
+                <div>
+                  <Label>Source</Label>
+                  <p className="text-sm bg-gray-100 p-2 rounded">{currentRule.source}</p>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <p className="text-sm bg-gray-100 p-2 rounded">
+                    {currentRule.isActive ? 'Active' : 'Inactive'}
                   </p>
-                </di              </div>
-              <div
-                <Label>Conditions (Plain English)</Label>
-                <div className="text-sm bg-blue-50 p-3 rounded border">
-                  {/* Convert JSON to plain English */}
-                  {Object.entries(currentRule.conditions).map(([field, condition]: [string, any]) => (
-                    <div key={field} className="mb-2">
-                      <strong>When {field}</strong>{' '}
-                      {Object.entries(condition).map(([operator, value]: [string, any]) => (
-                        <span key={operator}>
-                          {operator === 'equals' && `equals "${value}"`}
-                          {operator === 'greater_than' && `is greater than ${value}`}
-                          {operator === 'less_than' && `is less than ${value}`}
-                          {operator === 'contains' && `contains "${value}"`}
-                        </span>
-                      ))}
-                    </div>
-                  ))}
+                </div>
+                <div>
+                  <Label>Confidence</Label>
+                  <p className="text-sm bg-gray-100 p-2 rounded">
+                    {(currentRule.confidence * 100).toFixed(1)}%
+                  </p>
+                </div>
+                <div>
+                  <Label>Created</Label>
+                  <p className="text-sm bg-gray-100 p-2 rounded">
+                    {new Date(currentRule.createdAt).toLocaleString()}
+                  </p>
                 </div>
               </div>
               <div>
-                <Label>Action (Plain English)</Label>
-                <div className="text-sm bg-green-50 p-3 rounded border">
-                  {/* Convert JSON to plain English */}
-                  {Object.entries(currentRule.action).map(([actionType, value]: [string, any]) => (
-                    <div key={actionType} className="mb-2">
-                      <strong>Then</strong>{' '}
-                      {actionType === 'discount' && `apply ${value} discount`}
-                      {actionType === 'message' && `show message: "${value}"`}
-                      {actionType === 'escalate' && `escalate to ${value}`}
-                      {actionType === 'approve' && `automatically approve`}
-                      {actionType === 'reject' && `automatically reject`}
-                    </div>
-                  ))}
-                </div>
+                <Label>Conditions</Label>
+                <pre className="text-xs bg-gray-100 p-3 rounded overflow-auto max-h-40">
+                  {formatJson(currentRule.conditions)}
+                </pre>
               </div>
               <div>
-                <Label>Technical Details (JSON)</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs">Conditions</Label>
-                    <pre className="text-xs bg-gray-100 p-3 rounded overflow-auto max-h-32">
-                      {formatJson(currentRule.conditions)}
-                    </pre>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Action</Label>
-                    <pre className="text-xs bg-gray-100 p-3 rounded overflow-auto max-h-32">
-                      {formatJson(currentRule.action)}
-                    </pre>
-                  </div>
-                </div>
+                <Label>Action</Label>
+                <pre className="text-xs bg-gray-100 p-3 rounded overflow-auto max-h-40">
+                  {formatJson(currentRule.action)}
+                </pre>
               </div>
             </div>
           )}
           <DialogFooter>
             <Button onClick={() => setShowViewDialog(false)}>
               Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Request Dialog */}
-      <Dialog open={showDeleteRequestDialog} onOpenChange={setShowDeleteRequestDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-500" />
-              Request Rule Deletion
-            </DialogTitle>
-            <DialogDescription>
-              Submit a request to administrators to delete this rule. Provide a reason for the deletion request.
-            </DialogDescription>
-          </DialogHeader>
-          {ruleToDelete && (
-            <div className="space-y-4">
-              <div className="p-3 bg-gray-50 rounded">
-                <div className="text-sm font-medium">Rule to Delete:</div>
-                <div className="text-sm text-gray-600">
-                  ID: {ruleToDelete.id} - {ruleToDelete.ruleType}
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="deleteReason">Reason for Deletion *</Label>
-                <Textarea
-                  id="deleteReason"
-                  placeholder="Please explain why this rule should be deleted..."
-                  value={deleteReason}
-                  onChange={(e) => setDeleteReason(e.target.value)}
-                  rows={3}
-                  className="mt-1"
-                />
-              </div>
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  This will create a deletion request for administrators to review. The rule will remain active until approved.
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowDeleteRequestDialog(false);
-                setRuleToDelete(null);
-                setDeleteReason('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={submitDeleteRequest}
-              disabled={!deleteReason.trim()}
-            >
-              Submit Request
             </Button>
           </DialogFooter>
         </DialogContent>
