@@ -1,7 +1,60 @@
 import Header from "../components/Header";
 import ChatInterface from "../components/ChatInterface";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { MessageSquare, LogOut } from "lucide-react";
 
 export default function ChatPage() {
+  const { user, logout, isExternalBroker } = useAuth();
+
+  // Broker-specific header for external brokers
+  if (isExternalBroker) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Broker Header */}
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center">
+                <div className="bg-blue-600 p-2 rounded-lg mr-3">
+                  <MessageSquare className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-gray-900">Zurich AI Assistant</h1>
+                  <p className="text-sm text-gray-500">Broker Chat Portal</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
+                  <p className="text-xs text-gray-500">{user?.company || 'External Broker'}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={logout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8">
+            <h1 className="text-2xl font-medium text-gray-900 mb-3">
+              Chat with AI Assistant
+            </h1>
+            <p className="text-gray-600 leading-relaxed">
+              Ask me about policies, coverage, underwriting decisions, or any insurance-related questions.
+            </p>
+          </div>
+
+          <ChatInterface />
+        </div>
+      </div>
+    );
+  }
+
+  // Default Zurich user interface
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Header />

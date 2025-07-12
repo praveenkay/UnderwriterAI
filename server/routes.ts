@@ -1302,5 +1302,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Authentication routes (simplified for demo - no persistent sessions)
+  let currentUser: any = null;
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password are required' });
+      }
+
+      const { authenticateUser } = await import('./services/auth');
+      const user = await authenticateUser(username, password);
+      
+      if (user) {
+        currentUser = user;
+        res.json(user);
+      } else {
+        res.status(401).json({ error: 'Invalid credentials' });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    currentUser = null;
+    res.json({ message: 'Logged out successfully' });
+  });
+
+  app.get('/api/auth/me', async (req, res) => {
+    try {
+      if (!currentUser) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      res.json(currentUser);
+    } catch (error) {
+      console.error('Auth check error:', error);
+      res.status(500).json({ error: 'Authentication check failed' });
+    }
+  });
+
   return httpServer;
 }
