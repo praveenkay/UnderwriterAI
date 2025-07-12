@@ -14,7 +14,7 @@ export async function trackEvent(eventData: InsertAnalyticsEvent): Promise<void>
 }
 
 export async function trackChatMessage(
-  brokerId: number,
+  brokerId: string,
   brokerName: string,
   sessionId: string,
   messageType: string = "text"
@@ -25,13 +25,13 @@ export async function trackChatMessage(
     brokerName,
     sessionId,
     entityType: "chat",
-    metadata: { messageType },
+    metadata: JSON.stringify({ messageType }),
     duration: 0
   });
 }
 
 export async function trackDecision(
-  brokerId: number,
+  brokerId: string,
   brokerName: string,
   sessionId: string,
   policyId: number,
@@ -46,13 +46,13 @@ export async function trackDecision(
     sessionId,
     entityType: "policy",
     entityId: policyId,
-    metadata: { decision, confidence },
+    metadata: JSON.stringify({ decision, confidence }),
     duration: responseTime
   });
 }
 
 export async function trackDocumentUpload(
-  brokerId: number,
+  brokerId: string,
   brokerName: string,
   documentId: number,
   fileType: string,
@@ -64,12 +64,12 @@ export async function trackDocumentUpload(
     brokerName,
     entityType: "document",
     entityId: documentId,
-    metadata: { fileType },
+    metadata: JSON.stringify({ fileType }),
     duration: processingTime
   });
 }
 
-export async function updateBrokerMetrics(brokerId: number): Promise<void> {
+export async function updateBrokerMetrics(brokerId: string): Promise<void> {
   try {
     const broker = await storage.getUser(brokerId);
     if (!broker) return;
@@ -120,7 +120,7 @@ export async function updateBrokerMetrics(brokerId: number): Promise<void> {
     const metricsData: InsertBrokerMetrics = {
       brokerId,
       brokerName: broker.name,
-      metricDate: today,
+      metricDate: today.getTime(),
       totalChats,
       totalDecisions,
       avgResponseTime,
@@ -137,7 +137,7 @@ export async function updateBrokerMetrics(brokerId: number): Promise<void> {
   }
 }
 
-export async function getBrokerAnalytics(brokerId: number) {
+export async function getBrokerAnalytics(brokerId: string) {
   try {
     const broker = await storage.getUser(brokerId);
     if (!broker) return null;

@@ -23,6 +23,7 @@ export interface IStorage {
   getChatMessagesBySession(sessionId: string): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getAllChatMessages(): Promise<ChatMessage[]>;
+  deleteChatMessage?(id: number): Promise<void>;
 
   // Underwriting Decisions
   getUnderwritingDecision(id: number): Promise<UnderwritingDecision | undefined>;
@@ -34,7 +35,7 @@ export interface IStorage {
   getDocument(id: number): Promise<Document | undefined>;
   createDocument(document: InsertDocument): Promise<Document>;
   getAllDocuments(): Promise<Document[]>;
-  updateDocumentStatus(id: number, status: string, extractedRules?: any[]): Promise<void>;
+  updateDocumentStatus(id: number, status: string, extractedRules?: any[], metadata?: any): Promise<void>;
   deleteDocument(id: number): Promise<void>;
 
   // Underwriting Rules
@@ -95,12 +96,13 @@ export class MemStorage implements IStorage {
         policyType: "SME Restaurant",
         premium: 2400,
         coverageAmount: 500000,
-        startDate: new Date("2024-01-01"),
-        endDate: new Date("2024-12-31"),
+        startDate: new Date("2024-01-01").getTime(),
+        endDate: new Date("2024-12-31").getTime(),
         isActive: true,
-        claimsHistory: [],
+        claimsHistory: "[]",
         riskProfile: "low",
-        renewalDate: new Date("2024-12-01")
+        renewalDate: new Date("2024-12-01").getTime(),
+        createdAt: Date.now()
       },
       {
         id: 2,
@@ -109,12 +111,13 @@ export class MemStorage implements IStorage {
         policyType: "SME Restaurant",
         premium: 3600,
         coverageAmount: 750000,
-        startDate: new Date("2024-01-15"),
-        endDate: new Date("2025-01-14"),
+        startDate: new Date("2024-01-15").getTime(),
+        endDate: new Date("2025-01-14").getTime(),
         isActive: true,
-        claimsHistory: [{ type: "fire", amount: 15000, date: "2023-06-15" }],
+        claimsHistory: JSON.stringify([{ type: "fire", amount: 15000, date: "2023-06-15" }]),
         riskProfile: "high",
-        renewalDate: new Date("2025-01-01")
+        renewalDate: new Date("2025-01-01").getTime(),
+        createdAt: Date.now()
       }
     ];
 
@@ -125,22 +128,24 @@ export class MemStorage implements IStorage {
       {
         id: 1,
         ruleType: "discount",
-        conditions: { claimsHistory: "none_3_years", renewalStatus: "active" },
-        action: { discountType: "renewal", percentage: 5 },
+        conditions: JSON.stringify({ claimsHistory: "none_3_years", renewalStatus: "active" }),
+        action: JSON.stringify({ discountType: "renewal", percentage: 5 }),
         confidence: 95,
         source: "extracted_from_chat",
         isActive: true,
-        createdAt: new Date()
+        createdAt: Date.now(),
+        sourceDocumentId: null
       },
       {
         id: 2,
         ruleType: "risk_assessment",
-        conditions: { previousClaims: "fire", businessType: "restaurant" },
-        action: { escalate: true, reason: "Complex risk factors require manual review" },
+        conditions: JSON.stringify({ previousClaims: "fire", businessType: "restaurant" }),
+        action: JSON.stringify({ escalate: true, reason: "Complex risk factors require manual review" }),
         confidence: 90,
         source: "guideline_document",
         isActive: true,
-        createdAt: new Date()
+        createdAt: Date.now(),
+        sourceDocumentId: null
       }
     ];
 
@@ -159,11 +164,20 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
+    const id = this.currentId.toString();
+    this.currentId++;
     const user: User = { 
       ...insertUser, 
       id,
-      role: insertUser.role || "broker"
+      role: insertUser.role || "broker",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      email: insertUser.email || null,
+      firstName: insertUser.firstName || null,
+      lastName: insertUser.lastName || null,
+      profileImageUrl: insertUser.profileImageUrl || null,
+      username: insertUser.username || null,
+      password: insertUser.password || null
     };
     this.users.set(id, user);
     return user;
@@ -184,9 +198,10 @@ export class MemStorage implements IStorage {
       ...insertPolicy, 
       id,
       isActive: insertPolicy.isActive ?? true,
-      claimsHistory: insertPolicy.claimsHistory || [],
+      claimsHistory: typeof insertPolicy.claimsHistory === 'string' ? insertPolicy.claimsHistory : JSON.stringify(insertPolicy.claimsHistory || []),
       riskProfile: insertPolicy.riskProfile || "medium",
-      renewalDate: insertPolicy.renewalDate || null
+      renewalDate: insertPolicy.renewalDate || null,
+      createdAt: Date.now()
     };
     this.policies.set(id, policy);
     return policy;
@@ -204,20 +219,21 @@ export class MemStorage implements IStorage {
   async getChatMessagesBySession(sessionId: string): Promise<ChatMessage[]> {
     return Array.from(this.chatMessages.values())
       .filter(msg => msg.sessionId === sessionId)
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      .sort((a, b) => a.timestamp - b.timestamp);
   }
 
   async createChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
     const id = this.currentId++;
-    const message: ChatMessage = { 
-      ...insertMessage, 
+    const message: ChatMessage = {
+      ...insertMessage,
       id,
-      timestamp: insertMessage.timestamp || new Date(),
-      messageType: insertMessage.messageType || "text",
-      metadata: insertMessage.metadata || {},
+      timestamp: Date.now(),
+      messageType: insertMessage.messageType || "user",
+      metadata: typeof insertMessage.metadata === 'string' ? insertMessage.metadata : JSON.stringify(insertMessage.metadata || {}),
       policyNumber: insertMessage.policyNumber || null,
       brokerId: insertMessage.brokerId || null,
-      isArchived: insertMessage.isArchived || false
+      isArchived: insertMessage.isArchived || false,
+      attachments: insertMessage.attachments || null
     };
     this.chatMessages.set(id, message);
     return message;
@@ -225,6 +241,10 @@ export class MemStorage implements IStorage {
 
   async getAllChatMessages(): Promise<ChatMessage[]> {
     return Array.from(this.chatMessages.values());
+  }
+
+  async deleteChatMessage(id: number): Promise<void> {
+    this.chatMessages.delete(id);
   }
 
   // Underwriting Decisions
@@ -237,11 +257,11 @@ export class MemStorage implements IStorage {
     const decision: UnderwritingDecision = { 
       ...insertDecision, 
       id,
-      timestamp: insertDecision.timestamp || new Date(),
+      timestamp: Date.now(),
       policyId: insertDecision.policyId || null,
       sessionId: insertDecision.sessionId || null,
       brokerId: insertDecision.brokerId || null,
-      rulesApplied: insertDecision.rulesApplied || []
+      rulesApplied: typeof insertDecision.rulesApplied === 'string' ? insertDecision.rulesApplied : JSON.stringify(insertDecision.rulesApplied || [])
     };
     this.underwritingDecisions.set(id, decision);
     return decision;
@@ -254,7 +274,7 @@ export class MemStorage implements IStorage {
 
   async getRecentDecisions(limit = 10): Promise<UnderwritingDecision[]> {
     return Array.from(this.underwritingDecisions.values())
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, limit);
   }
 
@@ -268,15 +288,18 @@ export class MemStorage implements IStorage {
     const document: Document = { 
       ...insertDocument, 
       id,
-      uploadDate: insertDocument.uploadDate || new Date(),
+      uploadDate: Date.now(),
       status: insertDocument.status || "pending",
-      extractedRules: insertDocument.extractedRules || [],
+      extractedRules: typeof insertDocument.extractedRules === 'string' ? insertDocument.extractedRules : JSON.stringify(insertDocument.extractedRules || []),
       content: insertDocument.content || null,
       processedDate: insertDocument.processedDate || null,
       isActive: insertDocument.isActive !== undefined ? insertDocument.isActive : true,
       uploadedBy: insertDocument.uploadedBy || null,
       fileSize: insertDocument.fileSize || null,
-      contentHash: insertDocument.contentHash || null
+      contentHash: insertDocument.contentHash || null,
+      filePath: insertDocument.filePath || null,
+      extractedData: insertDocument.extractedData || null,
+      mimeType: insertDocument.mimeType || null
     };
     this.documents.set(id, document);
     return document;
@@ -291,10 +314,10 @@ export class MemStorage implements IStorage {
     if (document) {
       document.status = status;
       if (status === "completed") {
-        document.processedDate = new Date();
+        document.processedDate = Date.now();
       }
       if (extractedRules) {
-        document.extractedRules = extractedRules;
+        document.extractedRules = JSON.stringify(extractedRules);
       }
     }
   }
@@ -314,7 +337,8 @@ export class MemStorage implements IStorage {
       ...insertRule, 
       id,
       isActive: insertRule.isActive ?? true,
-      createdAt: insertRule.createdAt || new Date()
+      createdAt: Date.now(),
+      sourceDocumentId: insertRule.sourceDocumentId || null
     };
     this.underwritingRules.set(id, rule);
     return rule;
@@ -364,7 +388,7 @@ export class MemStorage implements IStorage {
       id,
       status: insertEscalation.status || "pending",
       priority: insertEscalation.priority || "medium",
-      createdAt: insertEscalation.createdAt || new Date(),
+      createdAt: Date.now(),
       chatMessageId: insertEscalation.chatMessageId || null,
       assignedTo: insertEscalation.assignedTo || null,
       resolvedAt: insertEscalation.resolvedAt || null,
@@ -388,7 +412,7 @@ export class MemStorage implements IStorage {
         escalation.assignedTo = assignedTo;
       }
       if (status === "resolved") {
-        escalation.resolvedAt = new Date();
+        escalation.resolvedAt = Date.now();
       }
     }
   }
@@ -399,7 +423,7 @@ export class MemStorage implements IStorage {
     return newEvent;
   }
 
-  async getAnalyticsEventsByBroker(brokerId: number, limit = 100): Promise<any[]> {
+  async getAnalyticsEventsByBroker(brokerId: string, limit = 100): Promise<any[]> {
     return [];
   }
 
@@ -409,7 +433,7 @@ export class MemStorage implements IStorage {
     return newMetrics;
   }
 
-  async getBrokerMetrics(brokerId: number, date?: Date): Promise<any> {
+  async getBrokerMetrics(brokerId: string, date?: Date): Promise<any> {
     return {
       id: 1,
       brokerId,
@@ -427,7 +451,7 @@ export class MemStorage implements IStorage {
   }
 
   async getAllBrokerMetrics(date?: Date): Promise<any[]> {
-    return [await this.getBrokerMetrics(1)];
+    return [await this.getBrokerMetrics("1")];
   }
 }
 
