@@ -36,13 +36,13 @@ function Router() {
     return <Login />;
   }
 
-  // External brokers get limited access - only chat
+  // External brokers get limited access
   if (isExternalBroker) {
     return (
       <Switch>
-        <Route path="/" component={ChatPage} />
+        <Route path="/" component={BrokerDashboard} />
         <Route path="/chat" component={ChatPage} />
-        <Route component={ChatPage} />
+        <Route component={BrokerDashboard} />
       </Switch>
     );
   }

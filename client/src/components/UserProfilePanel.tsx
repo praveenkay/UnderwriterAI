@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BrokerProfile {
   name: string;
@@ -39,10 +40,10 @@ const brokerProfile: BrokerProfile = {
 
 export default function UserProfilePanel() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    // Implement logout logic
-    console.log("Logging out...");
+    logout();
     setIsOpen(false);
   };
 
@@ -52,6 +53,15 @@ export default function UserProfilePanel() {
     setIsOpen(false);
   };
 
+  // Use actual user data or fallback to demo data
+  const displayUser = user || brokerProfile;
+  const userName = user ? `${user.firstName} ${user.lastName}` : brokerProfile.name;
+  const userTitle = user?.role === 'zurich_admin' ? 'Admin User' : 
+                   user?.role === 'zurich_user' ? 'Zurich User' :
+                   user?.role === 'external_broker' ? 'External Broker' : brokerProfile.title;
+  const userEmail = user?.email || brokerProfile.email;
+  const userCompany = user?.company || 'Zurich Insurance';
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -60,8 +70,8 @@ export default function UserProfilePanel() {
             <User className="h-4 w-4 text-gray-600" />
           </div>
           <div className="text-left hidden md:block">
-            <div className="text-sm font-medium text-gray-900">{brokerProfile.name}</div>
-            <div className="text-xs text-gray-500">{brokerProfile.title}</div>
+            <div className="text-sm font-medium text-gray-900">{userName}</div>
+            <div className="text-xs text-gray-500">{userTitle}</div>
           </div>
         </Button>
       </PopoverTrigger>
@@ -73,84 +83,24 @@ export default function UserProfilePanel() {
               <User className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{brokerProfile.name}</h3>
-              <p className="text-sm text-gray-600">{brokerProfile.title}</p>
+              <h3 className="text-lg font-semibold text-gray-900">{userName}</h3>
+              <p className="text-sm text-gray-600">{userTitle}</p>
               <Badge variant="secondary" className="mt-1 text-xs">
-                {brokerProfile.category}
+                {userCompany}
               </Badge>
             </div>
           </div>
 
           <Separator className="my-4" />
 
-          {/* Profile Details */}
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <Shield className="h-4 w-4 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-900">Broker Code</p>
-                <p className="text-sm text-gray-600">{brokerProfile.brokerCode}</p>
-              </div>
-            </div>
-
+          {/* Essential Profile Details */}
+          <div className="space-y-3 mb-4">
             <div className="flex items-center space-x-3">
               <Mail className="h-4 w-4 text-gray-400" />
               <div>
                 <p className="text-sm font-medium text-gray-900">Email</p>
-                <p className="text-sm text-gray-600">{brokerProfile.email}</p>
+                <p className="text-sm text-gray-600">{userEmail}</p>
               </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Phone className="h-4 w-4 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-900">Phone</p>
-                <p className="text-sm text-gray-600">{brokerProfile.phone}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <MapPin className="h-4 w-4 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-900">Office Address</p>
-                <p className="text-sm text-gray-600">{brokerProfile.address}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Building className="h-4 w-4 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-900">Region</p>
-                <p className="text-sm text-gray-600">{brokerProfile.region}</p>
-              </div>
-            </div>
-          </div>
-
-          <Separator className="my-4" />
-
-          {/* Specializations */}
-          <div className="mb-4">
-            <p className="text-sm font-medium text-gray-900 mb-2">Specializations</p>
-            <div className="flex flex-wrap gap-2">
-              {brokerProfile.specializations.map((spec, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  {spec}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <Separator className="my-4" />
-
-          {/* License & Join Date */}
-          <div className="space-y-2 mb-4">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">License Number</span>
-              <span className="text-sm font-medium text-gray-900">{brokerProfile.licenseNumber}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Joined</span>
-              <span className="text-sm font-medium text-gray-900">{brokerProfile.joinDate}</span>
             </div>
           </div>
 
