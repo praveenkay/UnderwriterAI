@@ -1,17 +1,30 @@
+import { useState, useEffect } from 'react';
 import Header from "../components/Header";
 import DocumentUpload from "../components/DocumentUpload";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from '@/components/ui/progress';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { FileText, MessageSquare, CheckCircle, Clock, AlertCircle, Download, Trash2, Eye, Settings, AlertTriangle, User, Calendar } from "lucide-react";
+import { FileText, MessageSquare, CheckCircle, Clock, AlertCircle, Download, Trash2, Eye, Settings, AlertTriangle, User, Calendar, Upload, RefreshCw, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "../contexts/AuthContext";
 import type { Document } from "../types";
 
+interface ProcessingStats {
+  totalDocuments: number;
+  completed: number;
+  processing: number;
+  failed: number;
+  pending: number;
+}
+
 export default function DocumentsPage() {
+  const [activeTab, setActiveTab] = useState('upload');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -19,8 +32,18 @@ export default function DocumentsPage() {
   // Check if user is admin
   const isAdmin = user?.role === 'zurich_admin';
   
-  const { data: documents, isLoading } = useQuery<Document[]>({
+  const { data: documents = [], refetch, isLoading } = useQuery<Document[]>({
     queryKey: ['/api/documents'],
+    refetchInterval: 1000, // Poll every 1 second for real-time updates
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0, // Don't cache results
+  });
+
+  const { data: processingStats, refetch: refetchStats } = useQuery<ProcessingStats>({
+    queryKey: ['/api/documents/stats'],
+    refetchInterval: 1000,
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0, // Don't cache results
   });
 
   const { data: rules, isLoading: rulesLoading } = useQuery<any[]>({
@@ -165,6 +188,37 @@ export default function DocumentsPage() {
     }
   };
 
+  const calculateProgress = (doc: Document): number => {
+    if (doc.status === 'completed') return 100;
+    if (doc.status === 'failed') return 0;
+    if (doc.status === 'processing') {
+      // Estimate progress based on processing time
+      const elapsed = Date.now() - new Date(doc.uploadDate).getTime();
+      const estimatedTotal = Math.max(30000, elapsed * 2); // Estimate 30s minimum
+      return Math.min(95, (elapsed / estimatedTotal) * 100);
+    }
+    return 0;
+  };
+
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes) return 'Unknown';
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+
+  const formatProcessingTime = (ms?: number): string => {
+    if (!ms) return 'Unknown';
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  const overallProgress = documents.length > 0 
+    ? documents.reduce((sum: number, doc: Document) => sum + calculateProgress(doc), 0) / documents.length
+    : 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Header />
@@ -180,16 +234,173 @@ export default function DocumentsPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="upload">Upload & Process</TabsTrigger>
+            <TabsTrigger value="status">Processing Status</TabsTrigger>
+            <TabsTrigger value="history">Document Library</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="upload" className="space-y-6">
+            {/* Overall Progress */}
+            {documents.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5" />
+                    Overall Progress
+                  </CardTitle>
+                  <CardDescription>
+                    Processing {documents.length} document{documents.length !== 1 ? 's' : ''}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span>Total Progress</span>
+                        <span>{Math.round(overallProgress)}%</span>
+                      </div>
+                      <Progress value={overallProgress} className="h-2" />
+                    </div>
+                    
+                    {processingStats && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">{processingStats.completed}</div>
+                          <div className="text-sm text-green-700">Completed</div>
+                        </div>
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-600">{processingStats.processing}</div>
+                          <div className="text-sm text-blue-700">Processing</div>
+                        </div>
+                        <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                          <div className="text-2xl font-bold text-yellow-600">{processingStats.pending}</div>
+                          <div className="text-sm text-yellow-700">Pending</div>
+                        </div>
+                        <div className="text-center p-3 bg-red-50 rounded-lg">
+                          <div className="text-2xl font-bold text-red-600">{processingStats.failed}</div>
+                          <div className="text-sm text-red-700">Failed</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Document Ingestion */}
             <DocumentUpload />
-          </div>
-          
-          <div className="lg:col-span-2">
+          </TabsContent>
+
+          <TabsContent value="status" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Document Processing Status
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetch()}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {documents.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No documents uploaded yet. Upload a document to start processing.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {documents.map((doc) => {
+                      const progress = calculateProgress(doc);
+                      return (
+                        <div key={doc.id} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {getStatusIcon(doc.status)}
+                              <div>
+                                <h3 className="font-medium">{doc.filename}</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {doc.fileType} • {formatFileSize(doc.fileSize)} • 
+                                  Uploaded {new Date(doc.uploadDate).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge className={getStatusColor(doc.status)}>
+                              {doc.status}
+                            </Badge>
+                          </div>
+
+                          {/* Progress Bar */}
+                          {(doc.status === 'processing' || doc.status === 'completed') && (
+                            <div>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span>Processing Progress</span>
+                                <span>{Math.round(progress)}%</span>
+                              </div>
+                              <Progress value={progress} className="h-1" />
+                            </div>
+                          )}
+
+                          {/* Results */}
+                          {doc.status === 'completed' && (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Rules Extracted:</span>
+                                <span className="ml-2 font-medium">{doc.extractedRules?.length || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Processing Time:</span>
+                                <span className="ml-2 font-medium">{formatProcessingTime((doc as any).processingTime)}</span>
+                              </div>
+                              {doc.processedDate && (
+                                <div>
+                                  <span className="text-muted-foreground">Completed:</span>
+                                  <span className="ml-2 font-medium">
+                                    {new Date(doc.processedDate).toLocaleTimeString()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Error Display */}
+                          {doc.status === 'failed' && (
+                            <Alert variant="destructive">
+                              <AlertTriangle className="h-4 w-4" />
+                              <AlertDescription>
+                                {(doc as any).errorMessage || 'Processing failed due to an unknown error.'}
+                              </AlertDescription>
+                            </Alert>
+                          )}
+
+                          {/* Processing Info */}
+                          {doc.status === 'processing' && (
+                            <div className="text-sm text-muted-foreground">
+                              <div className="flex items-center gap-2">
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                Processing large document with intelligent chunking...
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-6">
             <Card className="swiss-card">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-medium text-gray-900">Document History</CardTitle>
+                  <CardTitle className="text-lg font-medium text-gray-900">Document Library</CardTitle>
                   <div className="flex items-center space-x-2">
                     <Dialog>
                       <DialogTrigger asChild>
@@ -261,51 +472,52 @@ export default function DocumentsPage() {
                     ))}
                   </div>
                 ) : documents && documents.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {documents.map((doc) => (
-                      <div key={doc.id} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
+                      <Card key={doc.id} className="p-4 hover:shadow-md transition-shadow">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
                             {getFileTypeIcon(doc.fileType)}
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{doc.filename}</p>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Badge variant="outline" className={getStatusColor(doc.status)}>
-                                  {doc.status}
-                                </Badge>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(doc.uploadDate).toLocaleDateString()}
-                                </span>
-                              </div>
-                              {doc.extractedRules && doc.extractedRules.length > 0 && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {doc.extractedRules.length} rules extracted
-                                </p>
-                              )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium break-words">{doc.filename}</p>
+                              <p className="text-xs text-muted-foreground">{doc.fileType}</p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            {getStatusIcon(doc.status)}
-                            <div className="flex items-center space-x-1">
+                          <div className="flex justify-start">
+                            <Badge className={getStatusColor(doc.status)} variant="outline">
+                              {doc.status}
+                            </Badge>
+                          </div>
+                          
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <div>Size: {formatFileSize(doc.fileSize)}</div>
+                            <div>Uploaded: {new Date(doc.uploadDate).toLocaleDateString()}</div>
+                            {doc.extractedRules && doc.extractedRules.length > 0 && (
+                              <div>Rules: {doc.extractedRules.length}</div>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-col gap-2">
+                            <div className="flex gap-2">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleDownload(doc.id, doc.filename)}
-                                className="h-8 w-8 p-0"
-                                title="Download document"
+                                className="flex-1"
                               >
-                                <Download className="h-4 w-4" />
+                                <Download className="h-3 w-3 mr-1" />
+                                Download
                               </Button>
                               {doc.extractedRules && doc.extractedRules.length > 0 && (
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button
-                                      variant="ghost"
+                                      variant="outline"
                                       size="sm"
-                                      className="h-8 w-8 p-0"
                                       title="View extracted rules"
                                     >
-                                      <Eye className="h-4 w-4" />
+                                      <Eye className="h-3 w-3 mr-1" />
+                                      Rules
                                     </Button>
                                   </DialogTrigger>
                                   <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -333,51 +545,53 @@ export default function DocumentsPage() {
                                   </DialogContent>
                                 </Dialog>
                               )}
-                              {isAdmin ? (
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                      title="Delete document"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Document</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete "{doc.filename}"? This action cannot be undone and will also remove any associated rules extracted from this document.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => deleteMutation.mutate(doc.id)}
-                                        className="bg-red-600 hover:bg-red-700"
-                                      >
-                                        Delete
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteRequest(doc.id, doc.filename)}
-                                  className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                  title="Request deletion"
-                                >
-                                  <AlertTriangle className="h-4 w-4" />
-                                </Button>
-                              )}
                             </div>
+                            {isAdmin ? (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    title="Delete document"
+                                  >
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{doc.filename}"? This action cannot be undone and will also remove any associated rules extracted from this document.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteMutation.mutate(doc.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteRequest(doc.id, doc.filename)}
+                                className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                title="Request deletion"
+                              >
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                Request Delete
+                              </Button>
+                            )}
                           </div>
                         </div>
-                      </div>
+                      </Card>
                     ))}
                   </div>
                 ) : (
@@ -389,8 +603,9 @@ export default function DocumentsPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
-        </div>
+          </TabsContent>
+
+        </Tabs>
       </div>
     </div>
   );
