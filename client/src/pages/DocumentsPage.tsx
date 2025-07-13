@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from '@/components/ui/progress';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { FileText, MessageSquare, CheckCircle, Clock, AlertCircle, Download, Trash2, Eye, Settings, AlertTriangle, User, Calendar, Upload, RefreshCw, XCircle } from "lucide-react";
+import { FileText, MessageSquare, CheckCircle, Clock, AlertCircle, Download, Trash2, Eye, Settings, AlertTriangle, User, Calendar, Upload, RefreshCw, XCircle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "../contexts/AuthContext";
 import type { Document } from "../types";
@@ -25,6 +26,8 @@ interface ProcessingStats {
 
 export default function DocumentsPage() {
   const [activeTab, setActiveTab] = useState('upload');
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<number>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -66,6 +69,7 @@ export default function DocumentsPage() {
         description: "Document has been successfully deleted",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      setSelectedDocuments(new Set());
     },
     onError: () => {
       toast({
@@ -75,6 +79,124 @@ export default function DocumentsPage() {
       });
     },
   });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (documentIds: number[]) => {
+      const promises = documentIds.map(id => 
+        fetch(`/api/documents/${id}`, { method: 'DELETE' })
+      );
+      const responses = await Promise.all(promises);
+      
+      const failedDeletes = responses.filter(response => !response.ok);
+      if (failedDeletes.length > 0) {
+        throw new Error(`Failed to delete ${failedDeletes.length} documents`);
+      }
+      
+      return { deletedCount: documentIds.length };
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Documents deleted",
+        description: `Successfully deleted ${result.deletedCount} documents`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      setSelectedDocuments(new Set());
+      setBulkDeleteDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Bulk delete failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Selection functions
+  const toggleDocumentSelection = (documentId: number) => {
+    const newSelected = new Set(selectedDocuments);
+    if (newSelected.has(documentId)) {
+      newSelected.delete(documentId);
+    } else {
+      newSelected.add(documentId);
+    }
+    setSelectedDocuments(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedDocuments.size === documents.length) {
+      setSelectedDocuments(new Set());
+    } else {
+      setSelectedDocuments(new Set(documents.map(doc => doc.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedDocuments(new Set());
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedDocuments.size === 0) return;
+    
+    if (isAdmin) {
+      setBulkDeleteDialogOpen(true);
+    } else {
+      // For non-admin users, submit bulk delete requests
+      handleBulkDeleteRequest();
+    }
+  };
+
+  const handleBulkDeleteRequest = async () => {
+    const reason = prompt(`Please provide a reason for requesting deletion of ${selectedDocuments.size} documents:`);
+    if (!reason || !reason.trim()) {
+      toast({
+        title: "Deletion request cancelled",
+        description: "A reason is required to request document deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const selectedDocs = documents.filter(doc => selectedDocuments.has(doc.id));
+      const promises = selectedDocs.map(doc => 
+        fetch('/api/documents/delete-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documentId: doc.id,
+            filename: doc.filename,
+            reason: reason.trim(),
+            requestedBy: user?.username || 'current_user',
+            requestedAt: new Date().toISOString()
+          })
+        })
+      );
+
+      const responses = await Promise.all(promises);
+      const successCount = responses.filter(response => response.ok).length;
+
+      if (successCount === selectedDocs.length) {
+        toast({
+          title: "Delete requests submitted",
+          description: `${successCount} delete requests have been sent to administrators for review.`,
+        });
+        setSelectedDocuments(new Set());
+      } else {
+        toast({
+          title: "Some requests failed",
+          description: `${successCount} of ${selectedDocs.length} requests were submitted successfully.`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Request failed",
+        description: "Failed to submit delete requests. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDownload = async (documentId: number, filename: string) => {
     try {
@@ -457,6 +579,50 @@ export default function DocumentsPage() {
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Bulk Actions Toolbar */}
+                {documents && documents.length > 0 && (
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={selectedDocuments.size === documents.length && documents.length > 0}
+                            onCheckedChange={toggleSelectAll}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm font-medium">
+                            Select All ({selectedDocuments.size} of {documents.length} selected)
+                          </span>
+                        </div>
+                        
+                        {selectedDocuments.size > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={clearSelection}
+                              className="flex items-center gap-1"
+                            >
+                              <X className="h-3 w-3" />
+                              Clear Selection
+                            </Button>
+                            
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleBulkDelete}
+                              className="flex items-center gap-1"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              {isAdmin ? 'Delete Selected' : 'Request Delete'} ({selectedDocuments.size})
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {isLoading ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
@@ -477,6 +643,11 @@ export default function DocumentsPage() {
                       <Card key={doc.id} className="p-4 hover:shadow-md transition-shadow">
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={selectedDocuments.has(doc.id)}
+                              onCheckedChange={() => toggleDocumentSelection(doc.id)}
+                              className="h-4 w-4"
+                            />
                             {getFileTypeIcon(doc.fileType)}
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium break-words">{doc.filename}</p>
@@ -606,6 +777,28 @@ export default function DocumentsPage() {
           </TabsContent>
 
         </Tabs>
+
+        {/* Bulk Delete Confirmation Dialog */}
+        <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Multiple Documents</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete {selectedDocuments.size} selected documents? This action cannot be undone and will also remove any associated rules extracted from these documents.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => bulkDeleteMutation.mutate(Array.from(selectedDocuments))}
+                className="bg-red-600 hover:bg-red-700"
+                disabled={bulkDeleteMutation.isPending}
+              >
+                {bulkDeleteMutation.isPending ? 'Deleting...' : `Delete ${selectedDocuments.size} Documents`}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
