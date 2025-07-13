@@ -78,6 +78,8 @@ export class MemStorage implements IStorage {
   private escalations: Map<number, Escalation> = new Map();
   private userSettings: Map<string, any> = new Map();
   private currentId = 1;
+  getUserSettings: any;
+  createOrUpdateUserSettings: any;
 
   constructor() {
     // Only seed data if not using database storage
