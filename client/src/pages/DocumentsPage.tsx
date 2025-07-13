@@ -39,7 +39,7 @@ export default function DocumentsPage() {
     queryKey: ['/api/documents'],
     refetchInterval: (data) => {
       // Only poll when there are processing documents and user is on processing/upload tabs
-      const hasProcessingDocs = data?.some((doc: Document) => doc.status === 'processing' || doc.status === 'pending');
+      const hasProcessingDocs = Array.isArray(data) && data.some((doc: Document) => doc.status === 'processing' || doc.status === 'pending');
       const shouldPoll = (activeTab === 'status' || activeTab === 'upload') && hasProcessingDocs;
       return shouldPoll ? 5000 : false; // Poll every 5 seconds only when needed
     },
