@@ -1,8 +1,72 @@
-# AgentVerse - AI Underwriting Assistant
+# UnderwriterAI - Intelligent Underwriting Assistant
 
 ## Overview
 
-AgentVerse is an AI-powered underwriting assistant designed for Zurich Insurance's SME (Small Medium Enterprise) business insurance operations. The system enables real-time broker interactions, automated underwriting decisions, and document processing to streamline policy management, renewals, and coverage amendments.
+UnderwriterAI is a comprehensive AI-powered underwriting assistant designed for Zurich Insurance's SME (Small Medium Enterprise) business insurance operations. The system provides real-time broker interactions, automated underwriting decisions, intelligent document processing, and advanced analytics to streamline policy management, renewals, and coverage amendments.
+
+## 🚀 Key Features
+
+### 1. **Multi-Role Authentication System**
+- **Zurich Admin Users**: Full system access with administrative privileges
+- **External Brokers**: Limited access to chat and broker-specific features
+- **Role-based UI**: Dynamic interface adaptation based on user permissions
+- **Secure Authentication**: JWT-based authentication with role validation
+
+### 2. **Intelligent Chat Interface**
+- **Real-time AI Conversations**: WebSocket-powered chat with multiple AI providers
+- **Multi-AI Provider Support**: Anthropic Claude, OpenAI GPT-4, Google Gemini with dynamic switching
+- **Context-Aware Responses**: AI leverages policy data, chat history, and document context
+- **File Attachment Support**: Upload and analyze documents directly in chat
+- **Message Types**: Support for text, decisions, escalations, and system notifications
+- **Chat History Management**: Persistent conversation storage with session tracking
+
+### 3. **Advanced Document Management**
+- **Bulk Document Operations**: Select all/individual documents with bulk delete functionality
+- **Role-Based Delete Permissions**: Admins can delete immediately, users submit delete requests
+- **Multi-Format Support**: PDF, TXT, Excel files with intelligent content extraction
+- **Real-time Processing Status**: Live progress tracking with detailed status indicators
+- **Document Library**: Comprehensive file management with download and preview capabilities
+- **Rule Extraction**: AI-powered extraction of underwriting rules from documents
+- **Vector Search Integration**: Semantic document search with embedding-based retrieval
+
+### 4. **Comprehensive Analytics Dashboard**
+- **Performance Metrics**: Broker performance tracking with time-based analytics
+- **Interactive Charts**: Dynamic visualizations with 7/30/90-day period selection
+- **Activity Monitoring**: Real-time activity feed with detailed event tracking
+- **Export Functionality**: PDF report generation for performance and document libraries
+- **Escalation Tracking**: Monitor and analyze escalation patterns and resolution times
+
+### 5. **Rules Management System**
+- **Dynamic Rule Engine**: Configurable business rules with confidence scoring
+- **Rule Types**: Support for discounts, amendments, coverage changes, and custom rules
+- **AI-Powered Rule Extraction**: Automatic rule discovery from uploaded documents
+- **Rule Validation**: Confidence scoring and manual review capabilities
+- **Rule Application**: Automated decision-making based on configured rules
+
+### 6. **Vector-Powered Search**
+- **Semantic Search**: OpenAI embedding-based document search
+- **Real-time Results**: Instant search with relevance scoring
+- **Document Context**: Search across all uploaded documents and extracted content
+- **Keyword Fallback**: Traditional keyword search when semantic search is unavailable
+- **Source Tracking**: Clear attribution of search results to source documents
+
+### 7. **User Profile Management**
+- **Broker Credentials**: Comprehensive profile information and contact details
+- **AI Chat Settings**: Customizable AI behavior and response preferences
+- **Privacy Controls**: User-configurable privacy and data handling settings
+- **Notification Preferences**: Customizable alert and notification settings
+
+### 8. **Notification System**
+- **Real-time Alerts**: WebSocket-powered instant notifications
+- **Status Tracking**: Document processing, chat updates, and system alerts
+- **Categorized Notifications**: Different types for documents, chats, escalations, and system events
+- **Notification History**: Persistent notification storage with read/unread status
+
+### 9. **Quick Actions Panel**
+- **Export Functions**: Generate reports for chat histories and performance data
+- **Escalation Management**: Quick escalation creation and tracking
+- **Report Generation**: Automated PDF generation for various data types
+- **Bulk Operations**: Streamlined workflows for common administrative tasks
 
 ## System Architecture
 
@@ -94,9 +158,97 @@ AgentVerse is an AI-powered underwriting assistant designed for Zurich Insurance
 
 Preferred communication style: Simple, everyday language.
 
+## 🏗️ Design Process Map
+
+### End-to-End Architecture Flow
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   User Login    │───▶│ Authentication  │───▶│ Role-Based UI   │
+│                 │    │   & JWT Token   │    │   Rendering     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           MAIN APPLICATION FLOW                            │
+├─────────────────┬─────────────────┬─────────────────┬─────────────────────┤
+│   Dashboard     │   Chat System   │   Documents     │    Analytics        │
+│                 │                 │                 │                     │
+│ • Quick Actions │ • Real-time AI  │ • Bulk Select   │ • Performance       │
+│ • Metrics Cards │ • Multi-Provider│ • Upload/Process│ • Time-based Views  │
+│ • Activity Feed │ • File Attach   │ • Rule Extract  │ • Export Reports    │
+│ • Notifications │ • Context-Aware │ • Vector Search │ • Escalation Track  │
+└─────────────────┴─────────────────┴─────────────────┴─────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          DATA PROCESSING LAYER                             │
+├─────────────────┬─────────────────┬─────────────────┬─────────────────────┤
+│   Document AI   │   Vector Store  │   Rules Engine  │   Analytics Engine  │
+│                 │                 │                 │                     │
+│ • PDF Extract   │ • Embeddings    │ • Rule Matching │ • Performance Calc  │
+│ • Rule Mining   │ • Semantic      │ • Confidence    │ • Trend Analysis    │
+│ • Status Track  │ • Search        │ • Auto-Apply   │ • Report Generation │
+│ • Bulk Ops      │ • Context Ret   │ • Validation    │ • Data Aggregation  │
+└─────────────────┴─────────────────┴─────────────────┴─────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           STORAGE & PERSISTENCE                            │
+├─────────────────┬─────────────────┬─────────────────┬─────────────────────┤
+│   SQLite DB     │   File Storage  │   Vector Store  │   Session Store     │
+│                 │                 │                 │                     │
+│ • User Data     │ • Documents     │ • Embeddings    │ • Chat History      │
+│ • Chat History  │ • Uploads       │ • Chunks        │ • WebSocket State   │
+│ • Rules         │ • Reports       │ • Metadata      │ • User Sessions     │
+│ • Analytics     │ • Exports       │ • Search Index  │ • Notifications     │
+└─────────────────┴─────────────────┴─────────────────┴─────────────────────┘
+```
+
+### Component Interaction Flow
+
+```
+User Action ──▶ Frontend Component ──▶ API Route ──▶ Service Layer ──▶ Database
+     │                   │                 │              │              │
+     │                   │                 │              │              │
+     ▼                   ▼                 ▼              ▼              ▼
+WebSocket ──▶ Real-time Updates ──▶ Event Handler ──▶ State Update ──▶ UI Refresh
+     │                   │                 │              │              │
+     │                   │                 │              │              │
+     ▼                   ▼                 ▼              ▼              ▼
+AI Provider ──▶ Context Retrieval ──▶ Vector Search ──▶ Response Gen ──▶ Chat UI
+```
+
+### Data Flow Architecture
+
+1. **Input Layer**: User interactions, file uploads, chat messages
+2. **Processing Layer**: AI analysis, rule extraction, vector embedding
+3. **Storage Layer**: SQLite database, file system, vector store
+4. **Output Layer**: UI updates, notifications, reports, real-time responses
+
+### Key Integration Points
+
+- **Authentication Flow**: JWT → Role Check → UI Adaptation
+- **Document Pipeline**: Upload → AI Processing → Rule Extraction → Vector Storage
+- **Chat System**: Message → Context Retrieval → AI Response → Real-time Delivery
+- **Analytics Engine**: Data Collection → Processing → Visualization → Export
+- **Bulk Operations**: Selection → Validation → Batch Processing → Status Updates
+
 ## Changelog
 
 ## Recent Changes
+
+- **July 13, 2025**: Advanced Document Management with Bulk Operations
+  - Implemented comprehensive bulk select functionality for document library
+  - Added individual and "select all" checkbox controls with dynamic selection counting
+  - Created role-based bulk delete system (admin immediate delete vs user delete requests)
+  - Implemented bulk actions toolbar that appears/disappears based on selection state
+  - Added bulk delete confirmation dialogs with proper error handling
+  - Optimized API polling to reduce server load (5-second intervals, conditional polling)
+  - Enhanced document library with improved performance and user experience
+  - Fixed excessive API polling issue that was causing terminal spam
+  - Added proper caching (30-second stale time) to reduce redundant requests
+  - Implemented smart polling that only occurs when processing documents exist
 
 - **June 25, 2025**: Complete Database Migration from PostgreSQL to SQLite
   - Successfully converted all database schemas from PostgreSQL to SQLite syntax

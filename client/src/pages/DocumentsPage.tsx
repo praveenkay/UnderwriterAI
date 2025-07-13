@@ -37,16 +37,23 @@ export default function DocumentsPage() {
   
   const { data: documents = [], refetch, isLoading } = useQuery<Document[]>({
     queryKey: ['/api/documents'],
-    refetchInterval: 1000, // Poll every 1 second for real-time updates
-    staleTime: 0, // Always fetch fresh data
-    gcTime: 0, // Don't cache results
+    refetchInterval: (data) => {
+      // Only poll when there are processing documents and user is on processing/upload tabs
+      const hasProcessingDocs = data?.some((doc: Document) => doc.status === 'processing' || doc.status === 'pending');
+      const shouldPoll = (activeTab === 'status' || activeTab === 'upload') && hasProcessingDocs;
+      return shouldPoll ? 5000 : false; // Poll every 5 seconds only when needed
+    },
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const { data: processingStats, refetch: refetchStats } = useQuery<ProcessingStats>({
     queryKey: ['/api/documents/stats'],
-    refetchInterval: 1000,
-    staleTime: 0, // Always fetch fresh data
-    gcTime: 0, // Don't cache results
+    refetchInterval: (data) => {
+      // Only poll when user is on processing/upload tabs and there might be processing docs
+      const shouldPoll = (activeTab === 'status' || activeTab === 'upload');
+      return shouldPoll ? 5000 : false; // Poll every 5 seconds only when needed
+    },
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const { data: rules, isLoading: rulesLoading } = useQuery<any[]>({
