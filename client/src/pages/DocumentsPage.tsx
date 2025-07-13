@@ -5,13 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { FileText, MessageSquare, CheckCircle, Clock, AlertCircle, Download, Trash2, Eye, Settings, AlertTriangle, User, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "../contexts/AuthContext";
 import type { Document } from "../types";
 
 export default function DocumentsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  // Check if user is admin
+  const isAdmin = user?.role === 'zurich_admin';
   
   const { data: documents, isLoading } = useQuery<Document[]>({
     queryKey: ['/api/documents'],
@@ -327,15 +333,47 @@ export default function DocumentsPage() {
                                   </DialogContent>
                                 </Dialog>
                               )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteRequest(doc.id, doc.filename)}
-                                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                title="Request deletion"
-                              >
-                                <AlertTriangle className="h-4 w-4" />
-                              </Button>
+                              {isAdmin ? (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      title="Delete document"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete "{doc.filename}"? This action cannot be undone and will also remove any associated rules extracted from this document.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => deleteMutation.mutate(doc.id)}
+                                        className="bg-red-600 hover:bg-red-700"
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteRequest(doc.id, doc.filename)}
+                                  className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                  title="Request deletion"
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>

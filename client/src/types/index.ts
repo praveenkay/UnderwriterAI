@@ -69,11 +69,15 @@ export interface UnderwritingDecision {
 export interface Document {
   id: number;
   filename: string;
+  originalFilename: string;
   fileType: string;
-  uploadDate: Date;
-  processedDate?: Date;
+  fileSize: number;
+  uploadDate: string;
+  processedDate?: string;
   status: string;
   extractedRules: any[];
+  filePath?: string;
+  uploadedBy?: string;
 }
 
 export interface Escalation {

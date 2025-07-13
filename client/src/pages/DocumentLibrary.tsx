@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "../contexts/AuthContext";
+import type { Document } from "../types";
 import { 
   Upload, 
   FileText, 
@@ -18,20 +20,96 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  FileX
+  FileX,
+  AlertTriangle
 } from "lucide-react";
 
 export default function DocumentLibrary() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
 
-  const { data: documents = [], isLoading } = useQuery({
+  // Check if user is admin
+  const isAdmin = user?.role === 'zurich_admin';
+
+  const { data: documents = [], isLoading } = useQuery<Document[]>({
     queryKey: ["/api/documents"],
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (documentId: number) => {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Delete failed');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Document deleted",
+        description: "Document has been successfully deleted",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+    },
+    onError: () => {
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete document. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteRequest = async (documentId: number, filename: string) => {
+    const reason = prompt('Please provide a reason for requesting deletion of this document:');
+    if (!reason || !reason.trim()) {
+      toast({
+        title: "Deletion request cancelled",
+        description: "A reason is required to request document deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/documents/delete-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId,
+          filename,
+          reason: reason.trim(),
+          requestedBy: user?.username || 'current_user',
+          requestedAt: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Delete request submitted",
+          description: "Your request has been sent to administrators for review.",
+        });
+      } else {
+        toast({
+          title: "Request failed",
+          description: "Failed to submit delete request. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Request failed",
+        description: "Failed to submit delete request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -320,6 +398,47 @@ export default function DocumentLibrary() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {isAdmin ? (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Delete document"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{document.originalFilename}"? This action cannot be undone and will also remove any associated rules extracted from this document.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMutation.mutate(document.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteRequest(document.id, document.originalFilename)}
+                            className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                            title="Request deletion"
+                          >
+                            <AlertTriangle className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

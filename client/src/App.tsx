@@ -57,6 +57,7 @@ function Router() {
         <Route path="/search" component={VectorSearch} />
         <Route path="/analytics" component={AnalyticsPage} />
         <Route path="/documents" component={DocumentsPage} />
+        <Route path="/document-library" component={DocumentLibrary} />
         <Route path="/data-ingestion" component={DataIngestion} />
         <Route path="/profile" component={UserProfile} />
         <Route component={NotFound} />
