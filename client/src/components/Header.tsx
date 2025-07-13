@@ -1,16 +1,20 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "../contexts/AuthContext";
 import NotificationsPanel from "./NotificationsPanel";
 import UserProfilePanel from "./UserProfilePanel";
 
 export default function Header() {
   const [location] = useLocation();
+  const { user } = useAuth();
 
   const isActive = (path: string) => {
     if (path === "/" && location === "/") return true;
     if (path !== "/" && location.startsWith(path)) return true;
     return false;
   };
+
+  const isAdmin = user?.role === 'zurich_admin';
 
   return (
     <header id="header" className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-md bg-white/95">
@@ -66,6 +70,24 @@ export default function Header() {
               }`}>
                 ANALYTICS
               </Link>
+              {isAdmin && (
+                <>
+                  <Link href="/data-ingestion" className={`text-sm tracking-wide pb-2 transition-colors ${
+                    isActive("/data-ingestion") 
+                      ? "text-primary font-medium border-b-2 border-primary" 
+                      : "text-gray-500 hover:text-gray-900"
+                  }`}>
+                    DATA INGESTION
+                  </Link>
+                  <Link href="/document-library" className={`text-sm tracking-wide pb-2 transition-colors ${
+                    isActive("/document-library") 
+                      ? "text-primary font-medium border-b-2 border-primary" 
+                      : "text-gray-500 hover:text-gray-900"
+                  }`}>
+                    DOCUMENT LIBRARY
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
           <div className="flex items-center space-x-4">
