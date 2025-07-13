@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageSquare, FileText } from 'lucide-react';
 import UserProfilePanel from '@/components/UserProfilePanel';
+import NotificationsPanel from '@/components/NotificationsPanel';
 import Footer from '@/components/Footer';
 
 export default function BrokerDashboard() {
@@ -66,9 +67,7 @@ export default function BrokerDashboard() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
-                2
-              </div>
+              <NotificationsPanel />
               <UserProfilePanel />
             </div>
           </div>

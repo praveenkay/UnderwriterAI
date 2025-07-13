@@ -8,9 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Edit, Plus, ToggleLeft, ToggleRight, Eye, Search, Filter } from 'lucide-react';
+import { Trash2, Edit, Plus, ToggleLeft, ToggleRight, Eye, Search, Filter, Download, Upload, Copy, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface Rule {
   id: number;
@@ -36,6 +38,8 @@ interface RulesResponse {
 }
 
 const RulesManagement: React.FC = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [rules, setRules] = useState<Rule[]>([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -49,6 +53,7 @@ const RulesManagement: React.FC = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showBulkImportDialog, setShowBulkImportDialog] = useState(false);
   const [currentRule, setCurrentRule] = useState<Rule | null>(null);
   const [filters, setFilters] = useState({
     ruleType: '',
@@ -65,8 +70,13 @@ const RulesManagement: React.FC = () => {
     source: 'manual'
   });
 
+  const [bulkImportData, setBulkImportData] = useState('');
+
   const ruleTypes = ['discount', 'coverage', 'risk_assessment', 'escalation'];
   const sources = ['manual', 'extracted_from_chat', 'guideline_document'];
+
+  // Check if user is admin
+  const isAdmin = user?.role === 'zurich_admin';
 
   const showAlert = (type: 'success' | 'error', message: string) => {
     setAlert({ type, message });
@@ -81,8 +91,8 @@ const RulesManagement: React.FC = () => {
         limit: '20'
       });
       
-      if (filters.ruleType) params.append('ruleType', filters.ruleType);
-      if (filters.isActive) params.append('isActive', filters.isActive);
+      if (filters.ruleType && filters.ruleType !== 'all') params.append('ruleType', filters.ruleType);
+      if (filters.isActive && filters.isActive !== 'all') params.append('isActive', filters.isActive);
 
       const response = await fetch(`/api/rules/all?${params}`);
       const data: RulesResponse = await response.json();
@@ -248,6 +258,130 @@ const RulesManagement: React.FC = () => {
     }
   };
 
+  const handleExportRules = async () => {
+    try {
+      const response = await fetch('/api/rules/export');
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `rules-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Export successful",
+          description: "Rules have been exported successfully.",
+        });
+      } else {
+        toast({
+          title: "Export failed",
+          description: "Failed to export rules.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "An error occurred while exporting rules.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkImport = async () => {
+    if (!bulkImportData.trim()) {
+      toast({
+        title: "Import failed",
+        description: "Please provide valid JSON data to import.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const rules = JSON.parse(bulkImportData);
+      const response = await fetch('/api/rules/bulk/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rules })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Import successful",
+          description: `${result.importedCount} rules imported successfully.`,
+        });
+        setShowBulkImportDialog(false);
+        setBulkImportData('');
+        fetchRules();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Import failed",
+          description: error.error || "Failed to import rules.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Import failed",
+        description: "Invalid JSON format or server error.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRequestDeletion = async (ruleId: number, ruleName: string) => {
+    const reason = prompt('Please provide a reason for requesting deletion of this rule:');
+    if (!reason || !reason.trim()) {
+      toast({
+        title: "Deletion request cancelled",
+        description: "A reason is required to request rule deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/rules/delete-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ruleId,
+          ruleName,
+          reason: reason.trim(),
+          requestedBy: user?.email || 'current_user',
+          requestedAt: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Delete request submitted",
+          description: "Your request has been sent to administrators for review.",
+        });
+      } else {
+        toast({
+          title: "Request failed",
+          description: "Failed to submit delete request. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Request failed",
+        description: "Failed to submit delete request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatJson = (obj: any) => JSON.stringify(obj, null, 2);
 
   return (
@@ -265,10 +399,24 @@ const RulesManagement: React.FC = () => {
           <h1 className="text-3xl font-bold">Rules Management</h1>
           <p className="text-gray-600">Manage underwriting rules and policies</p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Create Rule
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <>
+              <Button variant="outline" onClick={() => setShowBulkImportDialog(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Bulk Import
+              </Button>
+              <Button variant="outline" onClick={handleExportRules}>
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </Button>
+            </>
+          )}
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Create Rule
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -301,7 +449,7 @@ const RulesManagement: React.FC = () => {
                   <SelectValue placeholder="All types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All types</SelectItem>
+                  <SelectItem value="all">All types</SelectItem>
                   {ruleTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
@@ -315,7 +463,7 @@ const RulesManagement: React.FC = () => {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="true">Active</SelectItem>
                   <SelectItem value="false">Inactive</SelectItem>
                 </SelectContent>
@@ -696,6 +844,51 @@ const RulesManagement: React.FC = () => {
           <DialogFooter>
             <Button onClick={() => setShowViewDialog(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Import Dialog */}
+      <Dialog open={showBulkImportDialog} onOpenChange={setShowBulkImportDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Bulk Import Rules</DialogTitle>
+            <DialogDescription>
+              Import multiple rules from JSON data. Each rule should have the required fields: ruleType, conditions, action, confidence, and source.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>JSON Data</Label>
+              <Textarea
+                value={bulkImportData}
+                onChange={(e) => setBulkImportData(e.target.value)}
+                placeholder={`[
+  {
+    "ruleType": "discount",
+    "conditions": {"customerType": "premium"},
+    "action": {"discountPercent": 10},
+    "confidence": 0.9,
+    "source": "manual"
+  }
+]`}
+                rows={15}
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="text-sm text-gray-600">
+              <p><strong>Required fields:</strong> ruleType, conditions, action, confidence, source</p>
+              <p><strong>Valid rule types:</strong> {ruleTypes.join(', ')}</p>
+              <p><strong>Valid sources:</strong> {sources.join(', ')}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkImportDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkImport}>
+              Import Rules
             </Button>
           </DialogFooter>
         </DialogContent>

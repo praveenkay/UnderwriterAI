@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Bell, X, AlertTriangle, CheckCircle, Info, Clock } from "lucide-react";
+import { Bell, X, AlertTriangle, CheckCircle, Info, Clock, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -7,6 +7,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface Notification {
   id: number;
@@ -15,48 +17,181 @@ interface Notification {
   message: string;
   timestamp: Date;
   read: boolean;
+  targetRoles: ('zurich_admin' | 'zurich_user' | 'external_broker')[];
+  actionType?: 'delete_document' | 'delete_rule' | 'approve_request';
+  actionData?: {
+    itemId: number;
+    itemType: 'document' | 'rule';
+    itemName: string;
+    requestedBy: string;
+    reason: string;
+  };
 }
 
 const mockNotifications: Notification[] = [
   {
     id: 1,
     type: 'warning',
-    title: 'Escalation Alert',
-    message: 'Policy amendment for XYZ Corp requires manual review',
+    title: 'Policy Review Required',
+    message: 'Your policy application requires additional documentation',
     timestamp: new Date(Date.now() - 15 * 60 * 1000),
-    read: false
+    read: false,
+    targetRoles: ['external_broker']
   },
   {
     id: 2,
     type: 'success',
-    title: 'Document Processed',
-    message: 'Underwriting guidelines document successfully ingested',
+    title: 'Quote Approved',
+    message: 'Your quote for ABC Ltd has been approved and is ready for binding',
     timestamp: new Date(Date.now() - 45 * 60 * 1000),
-    read: false
+    read: false,
+    targetRoles: ['external_broker']
   },
   {
     id: 3,
     type: 'info',
-    title: 'System Update',
-    message: 'AI model updated with latest regulatory changes',
+    title: 'System Maintenance',
+    message: 'Scheduled maintenance will occur tonight from 2-4 AM GMT',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    read: true
+    read: true,
+    targetRoles: ['zurich_admin', 'zurich_user', 'external_broker']
   },
   {
     id: 4,
+    type: 'warning',
+    title: 'Escalation Alert',
+    message: 'Policy amendment for XYZ Corp requires manual review',
+    timestamp: new Date(Date.now() - 15 * 60 * 1000),
+    read: false,
+    targetRoles: ['zurich_admin', 'zurich_user']
+  },
+  {
+    id: 5,
+    type: 'success',
+    title: 'Document Processed',
+    message: 'Underwriting guidelines document successfully ingested',
+    timestamp: new Date(Date.now() - 45 * 60 * 1000),
+    read: false,
+    targetRoles: ['zurich_admin', 'zurich_user']
+  },
+  {
+    id: 6,
     type: 'error',
     title: 'Processing Failed',
     message: 'Unable to extract rules from uploaded chat log',
     timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    read: true
+    read: true,
+    targetRoles: ['zurich_admin']
+  },
+  {
+    id: 7,
+    type: 'warning',
+    title: 'Document Deletion Request',
+    message: 'User john.broker@company.com requests deletion of "old-guidelines.pdf"',
+    timestamp: new Date(Date.now() - 30 * 60 * 1000),
+    read: false,
+    targetRoles: ['zurich_admin'],
+    actionType: 'delete_document',
+    actionData: {
+      itemId: 123,
+      itemType: 'document',
+      itemName: 'old-guidelines.pdf',
+      requestedBy: 'john.broker@company.com',
+      reason: 'Document contains outdated information that may cause confusion'
+    }
+  },
+  {
+    id: 8,
+    type: 'warning',
+    title: 'Rule Deletion Request',
+    message: 'User sarah.underwriter@zurich.com requests deletion of discount rule #456',
+    timestamp: new Date(Date.now() - 60 * 60 * 1000),
+    read: false,
+    targetRoles: ['zurich_admin'],
+    actionType: 'delete_rule',
+    actionData: {
+      itemId: 456,
+      itemType: 'rule',
+      itemName: 'Discount Rule #456',
+      requestedBy: 'sarah.underwriter@zurich.com',
+      reason: 'Rule conflicts with new regulatory requirements'
+    }
   }
 ];
 
 export default function NotificationsPanel() {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [isOpen, setIsOpen] = useState(false);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Filter notifications based on user role
+  const filteredNotifications = notifications.filter(notification => 
+    user?.role && notification.targetRoles.includes(user.role)
+  );
+
+  const unreadCount = filteredNotifications.filter(n => !n.read).length;
+
+  const handleApproveAction = async (notification: Notification) => {
+    if (!notification.actionData) return;
+
+    try {
+      const endpoint = notification.actionData.itemType === 'document' 
+        ? `/api/documents/${notification.actionData.itemId}` 
+        : `/api/rules/${notification.actionData.itemId}`;
+
+      const response = await fetch(endpoint, { method: 'DELETE' });
+      
+      if (response.ok) {
+        toast({
+          title: "Action completed",
+          description: `${notification.actionData.itemName} has been deleted successfully.`,
+        });
+        
+        // Remove the notification
+        setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        
+        // Redirect to appropriate management page
+        if (notification.actionData.itemType === 'document') {
+          window.location.href = '/documents';
+        } else {
+          window.location.href = '/rules';
+        }
+      } else {
+        toast({
+          title: "Action failed",
+          description: "Failed to complete the requested action.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Action failed",
+        description: "An error occurred while processing the request.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectAction = (notification: Notification) => {
+    // Remove the notification (reject the request)
+    setNotifications(prev => prev.filter(n => n.id !== notification.id));
+    toast({
+      title: "Request rejected",
+      description: "The deletion request has been rejected.",
+    });
+  };
+
+  const handleViewDetails = (notification: Notification) => {
+    if (!notification.actionData) return;
+    
+    // Redirect to the appropriate management page to view the item
+    if (notification.actionData.itemType === 'document') {
+      window.location.href = '/documents';
+    } else {
+      window.location.href = '/rules';
+    }
+  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -124,8 +259,8 @@ export default function NotificationsPanel() {
           </div>
         </div>
         <div className="max-h-96 overflow-y-auto">
-          {notifications.length > 0 ? (
-            notifications.map((notification) => (
+          {filteredNotifications.length > 0 ? (
+            filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
                 className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
@@ -147,11 +282,59 @@ export default function NotificationsPanel() {
                     <p className="text-sm text-gray-600 mt-1">
                       {notification.message}
                     </p>
-                    <div className="flex items-center space-x-1 mt-2">
-                      <Clock className="h-3 w-3 text-gray-400" />
-                      <span className="text-xs text-gray-500">
-                        {formatTime(notification.timestamp)}
-                      </span>
+                    {notification.actionData && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                        <p><strong>Requested by:</strong> {notification.actionData.requestedBy}</p>
+                        <p><strong>Reason:</strong> {notification.actionData.reason}</p>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-3 w-3 text-gray-400" />
+                        <span className="text-xs text-gray-500">
+                          {formatTime(notification.timestamp)}
+                        </span>
+                      </div>
+                      {notification.actionType && notification.actionData && user?.role === 'zurich_admin' && (
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDetails(notification);
+                            }}
+                            className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                            title="View details"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApproveAction(notification);
+                            }}
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                            title="Approve deletion"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRejectAction(notification);
+                            }}
+                            className="h-6 w-6 p-0 text-gray-600 hover:text-gray-700"
+                            title="Reject request"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

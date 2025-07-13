@@ -629,25 +629,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced rules route with document source info
-  app.get('/api/rules', async (req, res) => {
-    try {
-      const rules = await storage.getActiveRules();
-      const enhancedRules = rules.map(rule => ({
-        ...rule,
-        conditions: typeof rule.conditions === 'string' 
-          ? JSON.parse(rule.conditions || '{}') 
-          : rule.conditions || {},
-        action: typeof rule.action === 'string' 
-          ? JSON.parse(rule.action || '{}') 
-          : rule.action || {}
-      }));
-      res.json(enhancedRules);
-    } catch (error) {
-      console.error("Rules fetch error:", error);
-      res.status(500).json({ error: 'Failed to fetch rules' });
-    }
-  });
 
   // Document rules route - get rules for specific document
   app.get('/api/documents/:id/rules', async (req, res) => {
@@ -834,6 +815,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export rules (must come before /:id route)
+  app.get('/api/rules/export', async (req, res) => {
+    try {
+      const rules = await storage.getAllRules();
+      
+      // Enhance rules with parsed JSON for export
+      const enhancedRules = rules.map(rule => ({
+        ...rule,
+        conditions: typeof rule.conditions === 'string' 
+          ? JSON.parse(rule.conditions || '{}') 
+          : rule.conditions || {},
+        action: typeof rule.action === 'string' 
+          ? JSON.parse(rule.action || '{}') 
+          : rule.action || {}
+      }));
+      
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        totalRules: enhancedRules.length,
+        rules: enhancedRules
+      };
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="rules-export-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(exportData);
+    } catch (error) {
+      console.error("Rules export error:", error);
+      res.status(500).json({ error: 'Failed to export rules' });
+    }
+  });
+
+  // Get rules by type (must come before /:id route)
+  app.get('/api/rules/type/:ruleType', async (req, res) => {
+    try {
+      const { ruleType } = req.params;
+      const rules = await storage.getRulesByType(ruleType);
+      
+      const enhancedRules = rules.map(rule => ({
+        ...rule,
+        conditions: typeof rule.conditions === 'string' 
+          ? JSON.parse(rule.conditions || '{}') 
+          : rule.conditions || {},
+        action: typeof rule.action === 'string' 
+          ? JSON.parse(rule.action || '{}') 
+          : rule.action || {}
+      }));
+      
+      res.json(enhancedRules);
+    } catch (error) {
+      console.error("Rules by type fetch error:", error);
+      res.status(500).json({ error: 'Failed to fetch rules by type' });
+    }
+  });
+
   // Get single rule by ID
   app.get('/api/rules/:id', async (req, res) => {
     try {
@@ -1002,28 +1037,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get rules by type
-  app.get('/api/rules/type/:ruleType', async (req, res) => {
-    try {
-      const { ruleType } = req.params;
-      const rules = await storage.getRulesByType(ruleType);
-      
-      const enhancedRules = rules.map(rule => ({
-        ...rule,
-        conditions: typeof rule.conditions === 'string' 
-          ? JSON.parse(rule.conditions || '{}') 
-          : rule.conditions || {},
-        action: typeof rule.action === 'string' 
-          ? JSON.parse(rule.action || '{}') 
-          : rule.action || {}
-      }));
-      
-      res.json(enhancedRules);
-    } catch (error) {
-      console.error("Rules by type fetch error:", error);
-      res.status(500).json({ error: 'Failed to fetch rules by type' });
-    }
-  });
 
   // Bulk operations
   app.post('/api/rules/bulk/delete', async (req, res) => {
@@ -1198,6 +1211,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete requests fetch error:", error);
       res.status(500).json({ error: 'Failed to fetch delete requests' });
+    }
+  });
+
+
+  // Bulk import rules
+  app.post('/api/rules/bulk/import', async (req, res) => {
+    try {
+      const { rules } = req.body;
+      
+      if (!Array.isArray(rules) || rules.length === 0) {
+        return res.status(400).json({ error: 'rules must be a non-empty array' });
+      }
+
+      let importedCount = 0;
+      const errors: string[] = [];
+
+      for (const rule of rules) {
+        try {
+          // Validate required fields
+          if (!rule.ruleType || !rule.conditions || !rule.action || rule.confidence === undefined) {
+            errors.push(`Rule missing required fields: ${JSON.stringify(rule)}`);
+            continue;
+          }
+
+          await storage.createUnderwritingRule({
+            ruleType: rule.ruleType,
+            conditions: typeof rule.conditions === 'object' ? JSON.stringify(rule.conditions) : rule.conditions,
+            action: typeof rule.action === 'object' ? JSON.stringify(rule.action) : rule.action,
+            confidence: rule.confidence,
+            source: rule.source || 'imported',
+            sourceDocumentId: rule.sourceDocumentId || null,
+            isActive: rule.isActive !== undefined ? rule.isActive : true
+          });
+          
+          importedCount++;
+        } catch (error) {
+          errors.push(`Failed to import rule: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      res.json({
+        message: `Bulk import completed`,
+        importedCount,
+        totalRequested: rules.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Bulk import error:", error);
+      res.status(500).json({ error: 'Failed to perform bulk import' });
     }
   });
 
