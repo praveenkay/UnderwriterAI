@@ -34,7 +34,7 @@ export default function Header() {
                 </div>
               </div>
             </Link>
-            <nav className="hidden lg:flex space-x-8">
+            <nav className="flex space-x-8">
               <Link href="/" className={`text-sm tracking-wide pb-2 transition-colors ${
                 isActive("/") 
                   ? "text-primary font-medium border-b-2 border-primary" 
