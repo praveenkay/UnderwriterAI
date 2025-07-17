@@ -15,6 +15,7 @@ import VectorSearch from "@/pages/VectorSearch";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import DataIngestion from "@/pages/DataIngestion";
 import RulesManagement from "@/pages/RulesManagement";
+import About from "@/pages/About";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
@@ -59,6 +60,7 @@ function Router() {
         <Route path="/documents" component={DocumentsPage} />
         <Route path="/document-library" component={DocumentLibrary} />
         <Route path="/data-ingestion" component={DataIngestion} />
+        <Route path="/about" component={About} />
         <Route path="/profile" component={UserProfile} />
         <Route component={NotFound} />
       </Switch>

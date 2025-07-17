@@ -70,6 +70,13 @@ export default function Header() {
               }`}>
                 ANALYTICS
               </Link>
+              <Link href="/about" className={`text-sm tracking-wide pb-2 transition-colors ${
+                isActive("/about") 
+                  ? "text-primary font-medium border-b-2 border-primary" 
+                  : "text-gray-500 hover:text-gray-900"
+              }`}>
+                ABOUT
+              </Link>
             </nav>
           </div>
           <div className="flex items-center space-x-4">
