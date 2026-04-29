@@ -31,13 +31,13 @@ export default function Login() {
     }
   };
 
-  const handleDemoLogin = async (role: 'zurich_admin' | 'zurich_user' | 'external_broker') => {
+  const handleDemoLogin = async (role: 'admin' | 'standard_user' | 'external_broker') => {
     setIsLoading(true);
     setError('');
 
     const demoCredentials = {
-      zurich_admin: { username: 'admin@zurich.com', password: 'admin123' },
-      zurich_user: { username: 'user@zurich.com', password: 'user123' },
+      admin: { username: 'admin@company.com', password: 'admin123' },
+      standard_user: { username: 'user@company.com', password: 'user123' },
       external_broker: { username: 'broker@external.com', password: 'broker123' }
     };
 
@@ -62,8 +62,8 @@ export default function Login() {
               <Shield className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Zurich Underwriter</h1>
-          <p className="text-gray-600 mt-2">Intelligent underwriting decisions powered by Zurich AI</p>
+          <h1 className="text-3xl font-bold text-gray-900">AI Underwriter</h1>
+          <p className="text-gray-600 mt-2">Intelligent underwriting decisions powered by AI</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
@@ -127,28 +127,28 @@ export default function Login() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <Button
-                  onClick={() => handleDemoLogin('zurich_admin')}
+                  onClick={() => handleDemoLogin('admin')}
                   disabled={isLoading}
                   className="w-full justify-start"
                   variant="outline"
                 >
                   <Shield className="mr-2 h-4 w-4" />
                   <div className="text-left">
-                    <div className="font-medium">Zurich Administrator</div>
+                    <div className="font-medium">Administrator</div>
                     <div className="text-sm text-gray-500">Full access to all features</div>
                   </div>
                 </Button>
 
                 <Button
-                  onClick={() => handleDemoLogin('zurich_user')}
+                  onClick={() => handleDemoLogin('standard_user')}
                   disabled={isLoading}
                   className="w-full justify-start"
                   variant="outline"
                 >
                   <Building2 className="mr-2 h-4 w-4" />
                   <div className="text-left">
-                    <div className="font-medium">Zurich User</div>
-                    <div className="text-sm text-gray-500">Standard Zurich employee access</div>
+                    <div className="font-medium">Standard User</div>
+                    <div className="text-sm text-gray-500">Standard employee access</div>
                   </div>
                 </Button>
 
@@ -176,7 +176,7 @@ export default function Login() {
         </Tabs>
 
         <div className="text-center text-sm text-gray-500">
-          <p>© 2025 Zurich Insurance. All rights reserved.</p>
+          <p>© 2025 UnderwriterAI. All rights reserved.</p>
         </div>
       </div>
     </div>

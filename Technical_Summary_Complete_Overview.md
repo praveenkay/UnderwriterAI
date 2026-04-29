@@ -2,7 +2,7 @@
 
 **Project/Team Name:** UnderwriterAI - Intelligent Underwriting Assistant
 
-**Use Case:** AI-Powered Insurance Underwriting for Zurich Insurance SME Business Operations
+**Use Case:** AI-Powered Insurance Underwriting for SME Business Operations
 
 ---
 
@@ -59,7 +59,7 @@ This technical summary has been broken down into four detailed parts:
 - **Export Capabilities**: PDF report generation for compliance
 
 ### ✅ Enterprise Security
-- **Role-Based Access**: Zurich Admin vs External Broker permissions
+- **Role-Based Access**: Admin vs Standard User vs External Broker permissions
 - **JWT Authentication**: Secure token-based authentication
 - **Audit Trails**: Complete decision and activity logging
 

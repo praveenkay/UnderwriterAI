@@ -2,14 +2,14 @@
 
 **Project/Team Name:** UnderwriterAI - Intelligent Underwriting Assistant
 
-**Use Case:** AI-Powered Insurance Underwriting for Zurich Insurance SME Business Operations
+**Use Case:** AI-Powered Insurance Underwriting for SME Business Operations
 
 ---
 
 ## What did you build?
 
 ### Goal of the Solution
-UnderwriterAI is a comprehensive multi-agent AI system designed to revolutionize Zurich Insurance's Small Medium Enterprise (SME) business insurance operations. The solution tackles the complex challenge of streamlining underwriting decisions, policy management, renewals, and coverage amendments through intelligent automation while maintaining human oversight for critical decisions.
+UnderwriterAI is a comprehensive multi-agent AI system designed to revolutionize Small Medium Enterprise (SME) business insurance operations. The solution tackles the complex challenge of streamlining underwriting decisions, policy management, renewals, and coverage amendments through intelligent automation while maintaining human oversight for critical decisions.
 
 **Primary Objectives:**
 - **Automate Manual Processes**: Transform document-heavy underwriting workflows into intelligent, automated pipelines
@@ -77,7 +77,7 @@ UnderwriterAI is a comprehensive multi-agent AI system designed to revolutionize
 
 #### 6. Authentication & Role Management
 **Security Features:**
-- **Multi-Role System**: Zurich Admin Users vs External Brokers
+- **Multi-Role System**: Admin Users, Standard Users, and External Brokers
 - **JWT-Based Security**: Role validation and secure API access
 - **Dynamic UI Adaptation**: Interface changes based on user permissions
 - **Audit Logging**: Complete activity tracking for compliance

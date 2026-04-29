@@ -1,0 +1,8 @@
+{
+  "currentProvider": "openrouter",
+  "currentModel": "minimax/minimax-m2.5:free",
+  "apiKeys": {
+    "openai": "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",
+    "openrouter": "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"
+  }
+}

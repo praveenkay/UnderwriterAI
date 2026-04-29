@@ -63,7 +63,7 @@ Selection → Validation → Role Check → Batch Process → Status Update → 
 
 ## 🔐 Security & Roles
 
-- **Zurich Admin**: Full system access, immediate delete permissions
+- **Admin**: Full system access, immediate delete permissions
 - **External Broker**: Limited access, delete request workflow
 - **JWT Authentication**: Role-based UI adaptation and API access
 

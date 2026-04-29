@@ -17,7 +17,7 @@ interface Notification {
   message: string;
   timestamp: Date;
   read: boolean;
-  targetRoles: ('zurich_admin' | 'zurich_user' | 'external_broker')[];
+  targetRoles: ('admin' | 'standard_user' | 'external_broker')[];
   actionType?: 'delete_document' | 'delete_rule' | 'approve_request';
   actionData?: {
     itemId: number;
@@ -54,7 +54,7 @@ const mockNotifications: Notification[] = [
     message: 'Scheduled maintenance will occur tonight from 2-4 AM GMT',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
     read: true,
-    targetRoles: ['zurich_admin', 'zurich_user', 'external_broker']
+    targetRoles: ['admin', 'standard_user', 'external_broker']
   },
   {
     id: 4,
@@ -63,7 +63,7 @@ const mockNotifications: Notification[] = [
     message: 'Policy amendment for XYZ Corp requires manual review',
     timestamp: new Date(Date.now() - 15 * 60 * 1000),
     read: false,
-    targetRoles: ['zurich_admin', 'zurich_user']
+    targetRoles: ['admin', 'standard_user']
   },
   {
     id: 5,
@@ -72,7 +72,7 @@ const mockNotifications: Notification[] = [
     message: 'Underwriting guidelines document successfully ingested',
     timestamp: new Date(Date.now() - 45 * 60 * 1000),
     read: false,
-    targetRoles: ['zurich_admin', 'zurich_user']
+    targetRoles: ['admin', 'standard_user']
   },
   {
     id: 6,
@@ -81,7 +81,7 @@ const mockNotifications: Notification[] = [
     message: 'Unable to extract rules from uploaded chat log',
     timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
     read: true,
-    targetRoles: ['zurich_admin']
+    targetRoles: ['admin']
   },
   {
     id: 7,
@@ -90,7 +90,7 @@ const mockNotifications: Notification[] = [
     message: 'User john.broker@company.com requests deletion of "old-guidelines.pdf"',
     timestamp: new Date(Date.now() - 30 * 60 * 1000),
     read: false,
-    targetRoles: ['zurich_admin'],
+    targetRoles: ['admin'],
     actionType: 'delete_document',
     actionData: {
       itemId: 123,
@@ -104,16 +104,16 @@ const mockNotifications: Notification[] = [
     id: 8,
     type: 'warning',
     title: 'Rule Deletion Request',
-    message: 'User sarah.underwriter@zurich.com requests deletion of discount rule #456',
+    message: 'User sarah.underwriter@company.com requests deletion of discount rule #456',
     timestamp: new Date(Date.now() - 60 * 60 * 1000),
     read: false,
-    targetRoles: ['zurich_admin'],
+    targetRoles: ['admin'],
     actionType: 'delete_rule',
     actionData: {
       itemId: 456,
       itemType: 'rule',
       itemName: 'Discount Rule #456',
-      requestedBy: 'sarah.underwriter@zurich.com',
+      requestedBy: 'sarah.underwriter@company.com',
       reason: 'Rule conflicts with new regulatory requirements'
     }
   }
@@ -295,7 +295,7 @@ export default function NotificationsPanel() {
                           {formatTime(notification.timestamp)}
                         </span>
                       </div>
-                      {notification.actionType && notification.actionData && user?.role === 'zurich_admin' && (
+                      {notification.actionType && notification.actionData && user?.role === 'admin' && (
                         <div className="flex items-center space-x-1">
                           <Button
                             variant="ghost"

@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "../contexts/AuthContext";
 import NotificationsPanel from "./NotificationsPanel";
 import UserProfilePanel from "./UserProfilePanel";
+import AIProviderPanel from "./AIProviderPanel";
 
 export default function Header() {
   const [location] = useLocation();
@@ -14,7 +15,7 @@ export default function Header() {
     return false;
   };
 
-  const isAdmin = user?.role === 'zurich_admin';
+  const isAdmin = user?.role === 'admin';
 
   return (
     <header id="header" className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-md bg-white/95">
@@ -29,8 +30,8 @@ export default function Header() {
                   </svg>
                 </div>
                 <div>
-                  <span className="text-xl-swiss text-gray-900">Zurich Underwriter</span>
-                  <div className="text-xs text-gray-500 font-medium tracking-wide">ZURICH AI UNDERWRITING</div>
+                  <span className="text-xl-swiss text-gray-900">AI Underwriter</span>
+                  <div className="text-xs text-gray-500 font-medium tracking-wide">AI UNDERWRITING</div>
                 </div>
               </div>
             </Link>
@@ -80,6 +81,7 @@ export default function Header() {
             </nav>
           </div>
           <div className="flex items-center space-x-4">
+            <AIProviderPanel />
             <NotificationsPanel />
             <UserProfilePanel />
           </div>

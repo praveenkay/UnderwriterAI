@@ -22,7 +22,7 @@ export default function Dashboard() {
         {/* Hero Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-medium text-gray-900 tracking-tight mb-3">
-            Zurich Underwriter Dashboard
+            Underwriter Dashboard
           </h1>
           <p className="text-gray-600 text-lg leading-relaxed max-w-2xl">
             AI-powered underwriting assistant for SME business insurance. View analytics, 

@@ -22,8 +22,8 @@ export default function ChatPage() {
                     <MessageSquare className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-xl font-semibold text-gray-900">Zurich Underwriter</h1>
-                    <p className="text-sm text-gray-500">ZURICH AI UNDERWRITING</p>
+                    <h1 className="text-xl font-semibold text-gray-900">AI Underwriter</h1>
+                    <p className="text-sm text-gray-500">AI UNDERWRITING</p>
                   </div>
                 </div>
                 
@@ -72,7 +72,7 @@ export default function ChatPage() {
     );
   }
 
-  // Default Zurich user interface
+  // Default user interface
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Header />

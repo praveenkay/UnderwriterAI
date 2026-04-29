@@ -47,7 +47,7 @@ export default function UserProfile() {
     // Profile data
     firstName: "John",
     lastName: "Smith",
-    email: "john.smith@zurich.com",
+    email: "john.smith@company.com",
     phone: "+1 (555) 123-4567",
     department: "Commercial Underwriting",
     location: "New York, NY",

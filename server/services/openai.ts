@@ -31,7 +31,7 @@ export async function processUnderwritingDecision(
   rules: any[]
 ): Promise<UnderwritingDecisionResponse> {
   const prompt = `
-You are an AI underwriting assistant for Zurich Insurance, specialized in SME (Small Medium Enterprise) business insurance.
+You are an AI underwriting assistant specialized in SME (Small Medium Enterprise) business insurance.
 
 UNDERWRITING REQUEST:
 - Policy Number: ${request.policyNumber}
@@ -68,7 +68,7 @@ Respond with JSON in this exact format:
 
   try {
     // Estimate tokens and select optimal model for underwriting decision
-    const systemPrompt = "You are an expert underwriting AI for Zurich Insurance. Make precise, rule-based decisions and explain your reasoning clearly.";
+    const systemPrompt = "You are an expert underwriting AI. Make precise, rule-based decisions and explain your reasoning clearly.";
     const totalTokens = tokenManager.estimateTokens(prompt + systemPrompt);
     const strategy = tokenManager.selectOptimalModel(totalTokens);
     
@@ -245,7 +245,7 @@ export async function generateChatResponse(
   }
 ): Promise<string> {
   const prompt = `
-You are an AI underwriting assistant for Zurich Insurance. A broker has sent you this message:
+You are an AI underwriting assistant. A broker has sent you this message:
 
 "${message}"
 
@@ -265,7 +265,7 @@ Keep responses concise, professional, and actionable. Always explain your reason
 
   try {
     // Estimate tokens and select optimal model for chat response
-    const systemPrompt = "You are a professional AI underwriting assistant for Zurich Insurance. Be helpful, accurate, and explain your decision-making process.";
+    const systemPrompt = "You are a professional AI underwriting assistant. Be helpful, accurate, and explain your decision-making process.";
     const totalTokens = tokenManager.estimateTokens(prompt + systemPrompt);
     const strategy = tokenManager.selectOptimalModel(totalTokens);
     

@@ -16,11 +16,12 @@ import AnalyticsPage from "@/pages/AnalyticsPage";
 import DataIngestion from "@/pages/DataIngestion";
 import RulesManagement from "@/pages/RulesManagement";
 import About from "@/pages/About";
+import AdminSettings from "@/pages/AdminSettings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading, isZurichUser, isExternalBroker } = useAuth();
+  const { isAuthenticated, isLoading, isInternalUser, isExternalBroker } = useAuth();
 
   if (isLoading) {
     return (
@@ -48,8 +49,8 @@ function Router() {
     );
   }
 
-  // Zurich users get full access
-  if (isZurichUser) {
+  // Internal users get full access
+  if (isInternalUser) {
     return (
       <Switch>
         <Route path="/" component={Dashboard} />
@@ -61,6 +62,7 @@ function Router() {
         <Route path="/document-library" component={DocumentLibrary} />
         <Route path="/data-ingestion" component={DataIngestion} />
         <Route path="/about" component={About} />
+        <Route path="/admin" component={AdminSettings} />
         <Route path="/profile" component={UserProfile} />
         <Route component={NotFound} />
       </Switch>

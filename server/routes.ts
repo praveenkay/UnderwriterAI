@@ -10,6 +10,7 @@ import { insertChatMessageSchema, insertDocumentSchema } from "@shared/schema";
 import { upload as fileUpload, processUploadedFile } from "./services/fileUpload";
 import { generateChatHistoryPDF, generateBrokerReportPDF, generateDocumentListPDF } from "./services/pdfGenerator";
 import { aiService } from "./services/aiProvider";
+import { aiConfigStore } from "./services/aiConfigStore";
 import { vectorStoreService } from "./services/vectorStore";
 import { chatIngestionService } from "./services/chatIngestion";
 import { fineTuningService } from "./services/fineTuning";
@@ -30,19 +31,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // AI Provider routes
   app.get("/api/ai/providers", (req, res) => {
-    res.json({
-      current: aiService.getCurrentProvider(),
-      available: aiService.getAvailableProviders()
-    });
+    res.json(aiService.getFullStatus());
   });
 
   app.post("/api/ai/provider", (req, res) => {
-    const { provider } = req.body;
+    const { provider, model } = req.body;
     const success = aiService.setProvider(provider);
     if (success) {
-      res.json({ success: true, current: aiService.getCurrentProvider() });
+      if (model) {
+        aiService.setModel(model);
+      }
+      res.json(aiService.getFullStatus());
     } else {
       res.status(400).json({ error: "Invalid provider or provider not available" });
+    }
+  });
+
+  app.post("/api/ai/model", (req, res) => {
+    const { model } = req.body;
+    if (!model) {
+      return res.status(400).json({ error: "Model is required" });
+    }
+    aiService.setModel(model);
+    res.json(aiService.getFullStatus());
+  });
+
+  // Admin AI configuration routes
+  app.get("/api/admin/ai/config", (req, res) => {
+    const status = aiService.getFullStatus();
+    res.json({
+      ...status,
+      maskedKeys: aiConfigStore.getMaskedKeys(),
+      configuredProviders: aiConfigStore.getConfiguredProviders(),
+      allProviders: ['anthropic', 'openai', 'gemini', 'openrouter'],
+      modelCatalog: aiService.MODEL_CATALOG,
+    });
+  });
+
+  app.post("/api/admin/ai/key", async (req, res) => {
+    const { provider, apiKey } = req.body;
+    if (!provider || !apiKey) {
+      return res.status(400).json({ error: "Provider and apiKey are required" });
+    }
+    const allowed = ['anthropic', 'openai', 'gemini', 'openrouter'];
+    if (!allowed.includes(provider)) {
+      return res.status(400).json({ error: "Invalid provider" });
+    }
+    const success = aiService.reinitializeProvider(provider, apiKey);
+    if (success) {
+      res.json({
+        success: true,
+        maskedKey: apiKey.length > 8 ? apiKey.substring(0, 4) + '••••••••' + apiKey.slice(-4) : '••••••••••••',
+        available: aiService.getAvailableProviders(),
+        configuredProviders: aiConfigStore.getConfiguredProviders(),
+      });
+    } else {
+      res.status(400).json({ error: "Failed to initialize provider with the given API key" });
+    }
+  });
+
+  app.delete("/api/admin/ai/key/:provider", (req, res) => {
+    const { provider } = req.params;
+    aiService.removeProvider(provider);
+    res.json({
+      success: true,
+      available: aiService.getAvailableProviders(),
+      configuredProviders: aiConfigStore.getConfiguredProviders(),
+    });
+  });
+
+  // Fetch live model list per provider
+  app.get("/api/admin/ai/models/:provider", async (req, res) => {
+    const { provider } = req.params;
+    const apiKey = aiConfigStore.getApiKey(provider);
+    const staticFallback = aiService.MODEL_CATALOG[provider] || [];
+
+    if (!apiKey) {
+      return res.json({ models: staticFallback, fallback: true });
+    }
+
+    try {
+      switch (provider) {
+        case 'openai': {
+          const { default: OpenAI } = await import('openai');
+          const client = new OpenAI({ apiKey });
+          const list = await client.models.list();
+          const chatModels = list.data
+            .filter(m => /^(gpt|o1|o3|chatgpt)/.test(m.id) && !m.id.includes('realtime') && !m.id.includes('audio'))
+            .sort((a, b) => b.created - a.created)
+            .map(m => ({ id: m.id, label: m.id }));
+          return res.json({ models: chatModels.length ? chatModels : staticFallback });
+        }
+        case 'anthropic': {
+          const { default: Anthropic } = await import('@anthropic-ai/sdk');
+          const client = new Anthropic({ apiKey });
+          const list = await (client.models as any).list();
+          const models = (list.data || []).map((m: any) => ({
+            id: m.id,
+            label: m.display_name || m.id,
+          }));
+          return res.json({ models: models.length ? models : staticFallback });
+        }
+        case 'gemini': {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+          );
+          const data: any = await response.json();
+          if (!response.ok) return res.json({ models: staticFallback, fallback: true });
+          const models = (data.models || [])
+            .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+            .map((m: any) => ({
+              id: m.name.replace('models/', ''),
+              label: m.displayName || m.name.replace('models/', ''),
+            }));
+          return res.json({ models: models.length ? models : staticFallback });
+        }
+        case 'openrouter': {
+          const response = await fetch('https://openrouter.ai/api/v1/models', {
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': 'https://underwriterai.app' },
+          });
+          const data: any = await response.json();
+          if (!response.ok) return res.json({ models: staticFallback, fallback: true });
+          const models = (data.data || []).map((m: any) => ({
+            id: m.id,
+            label: m.name || m.id,
+          }));
+          return res.json({ models: models.length ? models : staticFallback });
+        }
+        default:
+          return res.json({ models: staticFallback });
+      }
+    } catch (err: any) {
+      console.warn(`Failed to fetch live models for ${provider}:`, err.message);
+      return res.json({ models: staticFallback, fallback: true });
     }
   });
 
@@ -1118,7 +1239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete request endpoints for Zurich User requirements
+  // Delete request endpoints for Standard User requirements
   
   // Document delete request
   app.post('/api/documents/delete-request', async (req, res) => {

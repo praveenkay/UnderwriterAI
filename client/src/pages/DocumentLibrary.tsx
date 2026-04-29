@@ -38,7 +38,7 @@ export default function DocumentLibrary() {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   // Check if user is admin
-  const isAdmin = user?.role === 'zurich_admin';
+  const isAdmin = user?.role === 'admin';
 
   const { data: documents = [], isLoading } = useQuery<Document[]>({
     queryKey: ["/api/documents"],

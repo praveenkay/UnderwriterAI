@@ -4,7 +4,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'zurich_admin' | 'zurich_user' | 'external_broker';
+  role: 'admin' | 'standard_user' | 'external_broker';
   firstName?: string;
   lastName?: string;
   company?: string;
@@ -25,7 +25,7 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
-  isZurichUser: boolean;
+  isInternalUser: boolean;
   isExternalBroker: boolean;
 }
 
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const isAuthenticated = !!user;
-  const isZurichUser = user?.role === 'zurich_admin' || user?.role === 'zurich_user';
+  const isInternalUser = user?.role === 'admin' || user?.role === 'standard_user';
   const isExternalBroker = user?.role === 'external_broker';
 
   const value: AuthContextType = {
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     isLoading,
     isAuthenticated,
-    isZurichUser,
+    isInternalUser,
     isExternalBroker,
   };
 

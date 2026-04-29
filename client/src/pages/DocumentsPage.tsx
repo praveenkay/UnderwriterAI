@@ -33,7 +33,7 @@ export default function DocumentsPage() {
   const { user } = useAuth();
   
   // Check if user is admin
-  const isAdmin = user?.role === 'zurich_admin';
+  const isAdmin = user?.role === 'admin';
   
   const { data: documents = [], refetch, isLoading } = useQuery<Document[]>({
     queryKey: ['/api/documents'],

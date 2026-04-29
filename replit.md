@@ -2,7 +2,7 @@
 
 ## Overview
 
-UnderwriterAI is a comprehensive multi-agent AI system designed for Zurich Insurance's Small Medium Enterprise (SME) business insurance operations. This system automates underwriting processes, provides real-time broker support, and centralizes knowledge management through intelligent document processing and decision-making capabilities.
+UnderwriterAI is a comprehensive multi-agent AI system designed for Small Medium Enterprise (SME) business insurance operations. This system automates underwriting processes, provides real-time broker support, and centralizes knowledge management through intelligent document processing and decision-making capabilities.
 
 ## User Preferences
 
@@ -36,7 +36,7 @@ Preferred communication style: Simple, everyday language.
 ## Key Components
 
 ### 1. Authentication & Authorization
-- **Multi-role system**: Zurich admin users, Zurich regular users, external brokers
+- **Multi-role system**: Admin users, Standard users, external brokers
 - **Role-based UI**: Dynamic interface adaptation based on user permissions
 - **Security**: JWT tokens with session management
 

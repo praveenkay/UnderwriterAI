@@ -13,7 +13,7 @@ import type { Escalation, Metrics } from "../types";
 
 export default function QuickActions() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'zurich_admin';
+  const isAdmin = user?.role === 'admin';
 
   const { data: escalations } = useQuery<Escalation[]>({
     queryKey: ['/api/escalations'],

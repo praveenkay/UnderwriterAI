@@ -184,7 +184,7 @@ export default function ChatInterface() {
                 </div>
                 <div className="bg-gray-50 rounded-2xl rounded-tl-sm p-4 max-w-md">
                   <p className="text-gray-900">
-                    Hello! I'm your AI underwriting assistant for Zurich's SME business insurance. I can help you with:
+                    Hello! I'm your AI underwriting assistant for SME business insurance. I can help you with:
                   </p>
                   <ul className="mt-2 text-sm text-gray-700 space-y-1">
                     <li>• Policy renewals and discounts</li>
@@ -331,7 +331,7 @@ export default function ChatInterface() {
             </Button>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            AI responses are generated based on Zurich underwriting guidelines and historical data
+            AI responses are generated based on underwriting guidelines and historical data
           </p>
         </div>
       </Card>

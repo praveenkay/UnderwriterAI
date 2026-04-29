@@ -74,7 +74,7 @@ const RulesManagement: React.FC = () => {
   const sources = ['manual', 'extracted_from_chat', 'guideline_document'];
 
   // Check if user is admin
-  const isAdmin = user?.role === 'zurich_admin';
+  const isAdmin = user?.role === 'admin';
 
   const showAlert = (type: 'success' | 'error', message: string) => {
     setAlert({ type, message });

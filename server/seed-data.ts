@@ -186,7 +186,7 @@ export async function seedDatabase() {
   // Seed sample document
   await db.insert(documents).values({
     filename: "underwriting-guidelines-sample.txt",
-    originalFilename: "Zurich_SME_Guidelines_2024.txt",
+    originalFilename: "SME_Underwriting_Guidelines_2024.txt",
     fileType: "guideline",
     uploadedBy: brokerUser.id,
     brokerName: brokerUser.name,
